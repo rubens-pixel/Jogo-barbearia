@@ -1,19 +1,960 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DO ZERO AO FUTURO — Jogo da Barbearia</title><style>:root{font-family:system-ui,Arial;background:#0c1020;color:#eef3ff}*{box-sizing:border-box}body{margin:0}header{background:#1d1a9b;padding:18px 5%;border-bottom:5px solid #b2df20}header h1{margin:0;font-size:clamp(23px,4vw,38px)}header small{color:#d9e4ff}main{max-width:1150px;margin:auto;padding:18px}section,.tile{background:#19233a;border:1px solid #35435d;border-radius:16px;padding:18px;margin:12px 0}h2{color:#b2df20;margin:5px 0 12px}h3{margin:4px 0 9px}p{line-height:1.45}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.tile{margin:0;display:flex;flex-direction:column;gap:9px}.tile img{width:100%;height:125px;object-fit:cover;border-radius:9px}.tile p{margin:0;color:#c9d4e6;font-size:14px}.tile strong{font-size:18px}.tile button{margin-top:auto}button{background:#b2df20;color:#152015;border:0;padding:12px 14px;border-radius:10px;font-weight:800;cursor:pointer;font-size:14px}button:hover:not(:disabled){filter:brightness(1.08)}button:disabled{opacity:.36;cursor:not-allowed}.secondary{background:#334463;color:white}.danger{background:#a73242;color:white}.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.stat{padding:12px;border-radius:10px;background:#10192d;flex:1;min-width:140px}.stat b{display:block;font-size:21px;color:#b2df20}.muted{color:#aabbd3}.alert{background:#50331b;border-left:5px solid #ffc46a;padding:12px;border-radius:8px}.good{color:#b2df20}.bad{color:#ff8895}.log{max-height:210px;overflow:auto;background:#10192d;padding:10px;border-radius:8px;font-size:13px}.selected{outline:3px solid #b2df20}.progress{background:#34445b;border-radius:12px;height:10px;overflow:hidden}.progress span{display:block;background:#b2df20;height:100%}footer{padding:20px;text-align:center;color:#aabbd3}label{display:block;margin:8px 0}input{padding:9px;width:100%;border-radius:7px;border:1px solid #64718c;background:#0e1627;color:white}.tiny{font-size:12px;color:#aabbd3}hr{border:0;border-top:1px solid #34445b;margin:15px 0}</style></head><body><header><h1>DO ZERO AO FUTURO</h1><small>Sua barbearia. Suas escolhas. Seu resultado. • R$ 100 mil • 36 meses</small></header><main id="app"></main><footer>Simulação educacional: preços, demanda e eventos são parâmetros fictícios do jogo, não projeções comerciais.</footer><script>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D1A9B">
+<title>Do zero ao futuro — O Barbeiro da Cidade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0E0D2C; --panel:#17164A; --panel2:#1F1E5C; --line:#302F78; --blue:#1D1A9B; --green:#B2DF20;
+  --text:#F1F1FF; --muted:#A9AAD9; --neg:#FF8A94; --warn:#FFC977;
+  --r-lg:18px; --r-md:12px; --r-sm:8px;
+  --font:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ink);color:var(--text);font:16px/1.5 var(--font);padding-bottom:env(safe-area-inset-bottom,0)}
+body.hasdock{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.neg{color:var(--neg)!important;font-weight:700}
+.pos{color:var(--green)}
+.muted{color:var(--muted)} .fine{color:var(--muted);font-size:13px;margin:.5em 0} .center{text-align:center}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.ok{color:var(--green);font-weight:600}
+.warn{color:var(--warn);margin:0;font-weight:600}
+
+/* barra de caixa */
+#bar{position:sticky;top:0;z-index:20;display:flex;gap:6px 22px;align-items:center;flex-wrap:wrap;
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,4vw) 10px;background:var(--blue);border-bottom:3px solid var(--green)}
+#bar .lbl{display:block;font-size:11.5px;color:#C9CAF6;line-height:1.2}
+#bar .cash b{font-size:clamp(24px,5vw,32px);font-weight:800;font-stretch:80%;letter-spacing:-.01em;font-variant-numeric:tabular-nums;display:inline-block}
+#bar .cash b.neg{color:#FFB3BA!important}
+#bar .kv .num{font-weight:700}
+#bar .cash{margin-right:auto}
+#bar .flash{animation:flash .9s ease}
+@keyframes flash{0%{color:var(--green);transform:scale(1.06)}100%{transform:none}}
+@media (max-width:620px){ #bar{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:2px 10px;padding-top:calc(8px + env(safe-area-inset-top,0px));padding-bottom:8px}
+  #bar .cash{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;margin:0}
+  #bar .kv{font-size:12.5px} #bar .lbl{font-size:10.5px} #bar button{grid-row:2;grid-column:4;align-self:center} }
+
+main{max-width:1120px;margin:0 auto;padding:18px max(16px,4vw) 40px}
+h1,h2,h3,h4{font-stretch:85%;line-height:1.1;margin:0}
+h2{font-size:clamp(28px,5vw,40px);font-weight:800}
+h3{font-size:20px;font-weight:700;margin:26px 0 10px}
+h4{font-size:17px;margin:16px 0 6px}
+
+/* abertura */
+.hero{max-width:680px;margin:6vh auto 0}
+.hero .brand{color:var(--green);font-weight:700;margin:0 0 6px}
+.hero h1{font-size:clamp(46px,11vw,92px);font-weight:800;font-stretch:75%;letter-spacing:-.02em}
+.hero .sub{font-size:20px;color:#D7D8FF;margin:8px 0 26px}
+.how{border-left:3px solid var(--green);padding-left:18px}
+.how p{margin:0 0 12px;max-width:62ch}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0}
+
+button.primary{background:var(--green);color:#15180A;border:0;border-radius:var(--r-md);padding:14px 22px;font-weight:800;font-size:17px;min-height:50px}
+button.primary:disabled{background:#4A4B6E;color:#9B9CC4}
+button.secondary{background:var(--blue);border:1px solid #4642D6;border-radius:var(--r-sm);padding:10px 14px;font-weight:700;width:100%;min-height:44px}
+button.secondary:disabled{background:transparent;border-color:var(--line);color:var(--muted)}
+button.ghost{background:transparent;border:1px solid #5B5AB0;border-radius:var(--r-md);padding:12px 18px;font-weight:600;min-height:46px}
+button.ghost:disabled{opacity:.35}
+button.small{padding:7px 12px;min-height:36px;font-size:14px}
+button.danger{background:#6E1F2B;border:1px solid #A4404F;border-radius:var(--r-sm);padding:8px 14px;font-weight:700}
+#bar button.ghost{border-color:#8C8AE8}
+
+/* etapas */
+.steps{display:flex;gap:4px;list-style:none;padding:0;margin:0 0 18px;overflow-x:auto;scrollbar-width:none}
+.steps li{flex:1 0 auto;font-size:12px;color:var(--muted);padding:6px 0 0;border-top:4px solid var(--line);min-width:62px}
+.steps li.done{border-color:#6F8F12;color:#C7D98A} .steps li.now{border-color:var(--green);color:var(--text);font-weight:700}
+@media (max-width:760px){ .steps li:not(.now){font-size:0;min-width:14px} }
+.stephead{margin:0 0 6px} .stephead .count{margin:0 0 4px;color:var(--green);font-weight:600}
+.lead{color:#D5D6FA;max-width:70ch;margin:8px 0 18px}
+
+/* cartões de opção */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.grid.four{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.opt{display:flex;flex-direction:column;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:var(--r-lg);padding:0;overflow:hidden;transition:border-color .15s}
+.opt:hover:not(:disabled){border-color:#5E5CD0}
+.opt.sel{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
+.opt:disabled{opacity:.5}
+.opt.small{border-radius:var(--r-md)}
+.optbody{display:flex;flex-direction:column;gap:6px;padding:14px 16px 16px}
+.optname{font-weight:800;font-size:18px;font-stretch:88%;line-height:1.2}
+.optdesc{color:var(--muted);font-size:14.5px}
+.price{font-weight:800;font-size:19px;margin:2px 0 0}
+.blocked{color:var(--warn);font-size:13.5px;font-weight:600}
+.photo{aspect-ratio:4/3;background:#232262;display:flex}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.photo:has(.nophoto){aspect-ratio:auto;min-height:88px}
+.nophoto{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:12px;text-align:center;color:var(--muted);font-size:13px;border-bottom:1px dashed var(--line)}
+.nophoto code{font-size:12px;color:#C9CAF6;word-break:break-all}
+.facts{display:grid;grid-template-columns:auto auto;gap:3px 12px;margin:6px 0 0;font-size:14px}
+.facts dt{color:var(--muted)} .facts dd{margin:0;text-align:right;font-weight:600}
+.facts.wide{font-size:15px;background:var(--panel);border-radius:var(--r-md);padding:12px 14px;gap:6px 14px}
+
+.qty{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0}
+.qty input{width:130px;font:800 44px/1 var(--font);font-stretch:80%;text-align:center;background:var(--panel);color:var(--text);border:2px solid var(--line);border-radius:var(--r-md);padding:10px}
+button.big{font-size:28px;width:60px;height:60px;padding:0}
+.team{display:grid;gap:10px;margin:10px 0 16px}
+.teamrow{display:flex;justify-content:space-between;align-items:center;gap:14px;background:var(--panel);border-radius:var(--r-md);padding:12px 14px}
+.teamrow p{margin:2px 0 0;font-size:14px}
+.stepperbtn{display:flex;align-items:center;gap:12px;font-size:22px;font-weight:800}
+.stepperbtn button{width:44px;height:44px;padding:0;font-size:22px}
+
+.tbl{width:100%;border-collapse:collapse;font-size:15px;margin:8px 0}
+.tbl th{text-align:left;color:var(--muted);font-weight:600;font-size:13px;border-bottom:1px solid var(--line);padding:6px 8px}
+.tbl td{padding:7px 8px;border-bottom:1px solid #24235F}
+.tbl td:last-child,.tbl th:last-child{text-align:right}
+.tbl tr.sum td{font-weight:800;border-top:1px solid #4A49A0}
+.dre{max-width:620px}
+.cols{display:grid;grid-template-columns:1.5fr 1fr;gap:28px;align-items:start}
+@media (max-width:860px){ .cols{grid-template-columns:1fr} }
+
+/* mês */
+.timeline{display:flex;gap:3px;margin:0 0 16px}
+.timeline i{flex:1;height:8px;border-radius:2px;background:var(--line)}
+.timeline i.past{background:#6F8F12} .timeline i.now{background:var(--green)} .timeline i.q{margin-right:3px}
+.event{background:var(--panel);border-left:4px solid var(--muted);border-radius:var(--r-sm);padding:12px 16px;margin:10px 0}
+.event h3{margin:0 0 4px;font-size:18px} .event p{margin:0;max-width:75ch}
+.event.alert{border-color:var(--warn)} .event.decide{border-color:var(--green);background:var(--panel2)}
+.event.decide .grid{margin-top:12px}
+.acts{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.act{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:14px;display:flex;flex-direction:column;gap:6px}
+.act.off{background:transparent}
+.act h4{margin:0;font-size:17px}
+.act p{margin:0;font-size:14.5px;color:#D3D4F8}
+.act .meta{color:var(--muted);font-size:13px}
+.act .price{font-size:16px}
+.acthead{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:transparent;border:1px solid #5B5AB0;border-radius:99px;padding:6px 11px;font-size:13px}
+.chip.on{background:var(--green);color:#15180A;border-color:var(--green);font-weight:700}
+.chip:disabled{opacity:.35}
+.act button.secondary{margin-top:auto}
+.report{background:var(--panel);border-radius:var(--r-lg);padding:6px 18px 16px;margin:22px 0}
+.report ul{margin:0;padding-left:20px}
+
+/* final */
+.big4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
+.big4>div{background:var(--panel);border-radius:var(--r-md);padding:14px}
+.big4 .lbl{display:block;color:var(--muted);font-size:13px}
+.big4 .num{font-size:26px;font-weight:800;font-stretch:80%}
+.spark{display:flex;align-items:flex-end;gap:2px;height:120px;background:var(--panel);border-radius:var(--r-md);padding:10px}
+.spark i{flex:1;background:var(--green);border-radius:2px 2px 0 0;min-height:2px} .spark i.n{background:var(--neg)}
+.facts-list li{margin:4px 0}
+details{margin:14px 0} details.later{margin-top:18px} details.later .acts{margin-top:12px} summary{cursor:pointer;font-weight:700}
+
+/* dock + toast */
+#dock{position:fixed;left:0;right:0;bottom:0;z-index:25;background:#12113A;border-top:1px solid var(--line);
+  padding:10px max(16px,4vw) calc(10px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:center}
+#dock .proj{display:flex;flex-direction:column;min-width:0} #dock .proj b{font-size:18px}
+#dock .fine{grid-column:1/-1;margin:0;font-size:12px}
+@media (max-width:560px){ #dock{grid-template-columns:1fr} #dock button{width:100%} #dock .fine{display:none} body.hasdock{padding-bottom:140px} }
+#toast{position:fixed;top:92px;left:50%;transform:translate(-50%,-10px);z-index:30;background:#FFFFFF;color:#101030;border-radius:var(--r-md);
+  padding:10px 16px;display:flex;flex-direction:column;align-items:center;opacity:0;pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,.35);max-width:92vw;text-align:center}
+#toast b{font-size:17px} #toast .neg{color:#B0182C!important}
+#toast.show{animation:toast 3.2s ease forwards}
+@keyframes toast{0%{opacity:0;transform:translate(-50%,-10px)}8%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
+
+#dock[hidden]{display:none}
+dialog#sheet{background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:var(--r-lg);width:min(820px,94vw);max-height:88vh;padding:16px 18px}
+dialog::backdrop{background:rgba(5,5,20,.7)}
+.sheethead{display:flex;justify-content:space-between;align-items:center}
+.scroll{overflow:auto;max-height:58vh}
+footer{max-width:1120px;margin:0 auto;padding:0 max(16px,4vw) 30px;color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} #toast.show{opacity:1;transform:translate(-50%,0)} }
+</style>
+</head>
+<body>
+<div id="bar" role="status" aria-live="polite"></div>
+<div id="toast" role="status" aria-live="assertive"></div>
+<main id="app"></main>
+<div id="dock" hidden></div>
+<dialog id="sheet" aria-label="Extrato"></dialog>
+<footer>O Barbeiro da Cidade · Simulação educacional com parâmetros didáticos.</footer>
+<script>/* ===== MOTOR DO JOGO — lógica pura, sem DOM. Testado por tests/run_tests.js ===== */
+const G = (() => {
 'use strict';
-const money=x=>Number(x).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-const points=[['Centro comercial',5000,10000,1250,3300,'Movimento alto, competição e custos elevados.'],['Residencial — somente casas',2500,8000,310,2000,'Bairro de casas, clientes de vizinhança.'],['Bairro misto',4000,12000,430,2700,'Moradores e comércio próximos.'],['Rua secundária tranquila',3000,9000,360,2300,'Rua agradável, fluxo moderado.'],['Região de luxo',8000,20000,320,2700,'Público exigente e custos elevados.']];
-const catalog={chair:[['Cadeira básica simples',1200],['Cadeira intermediária — capitonê',2500],['Cadeira superior — Texas',4000],['Cadeira luxo',6000]],bench:[['Prateleira de parede',300],['Bancada com duas gavetas',800],['Bancada com armário',1500],['Bancada sofisticada',2500]],mirror:[['Espelho sem moldura',200],['Espelho emoldurado',500],['Espelho com LED',1000],['Espelho luxo LED',1500]],waiting:[['Seis cadeiras simples',600],['Cadeiras confortáveis',1500],['Sofá e poltronas',3000],['Sala de espera luxo',5000]],reception:[['Usar notebook que já possui (sem compra)',0],['Totem de autoatendimento',3000],['Balcão e recepcionista',2000],['Recepção luxo e duas recepcionistas',5000]],coffee:[['Garrafa térmica',100],['Cafeteira simples',500],['Máquina de grãos',3000]],facade:[['Pintura e logotipo',2000],['Pintura e vitrine',5000],['Revestimento ACM',8000],['Fachada luxo',12000]]};
-const visualAssets={point:["data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWVjZWIiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSI3MCIgeT0iOTUiIHdpZHRoPSI1ODAiIGhlaWdodD0iMjQwIiBmaWxsPSIjNDI0YTUwIi8+PHJlY3QgeD0iMTEwIiB5PSIxNzUiIHdpZHRoPSIyMjAiIGhlaWdodD0iMTU1IiBmaWxsPSIjYThjNWNlIi8+PHJlY3QgeD0iMzcwIiB5PSIxNzUiIHdpZHRoPSIyNDAiIGhlaWdodD0iMTU1IiBmaWxsPSIjYThjNWNlIi8+PHJlY3QgeD0iNjAiIHk9IjkwIiB3aWR0aD0iNjAwIiBoZWlnaHQ9IjU4IiBmaWxsPSIjZDlkNGM4Ii8+PHRleHQgeD0iMzYwIiB5PSIxMzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyOCIgZmlsbD0iIzFkMWE5YiI+QkFSQkVBUklBPC90ZXh0Pjwvc3ZnPg==", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlMmU3ZWMiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cGF0aCBkPSJNMjAgMjI1bDY1LTY1IDY1IDY1djEwNUgyMHoiIGZpbGw9IiM1MjZhNzgiLz48cmVjdCB4PSI2OCIgeT0iMjY1IiB3aWR0aD0iMzUiIGhlaWdodD0iNjUiIGZpbGw9IiNmNWYxZTgiLz48cGF0aCBkPSJNMTkwIDIyNWw2NS02NSA2NSA2NXYxMDVIMTkweiIgZmlsbD0iIzUyNmE3OCIvPjxyZWN0IHg9IjIzOCIgeT0iMjY1IiB3aWR0aD0iMzUiIGhlaWdodD0iNjUiIGZpbGw9IiNmNWYxZTgiLz48cGF0aCBkPSJNMzYwIDIyNWw2NS02NSA2NSA2NXYxMDVIMzYweiIgZmlsbD0iIzUyNmE3OCIvPjxyZWN0IHg9IjQwOCIgeT0iMjY1IiB3aWR0aD0iMzUiIGhlaWdodD0iNjUiIGZpbGw9IiNmNWYxZTgiLz48cGF0aCBkPSJNNTMwIDIyNWw2NS02NSA2NSA2NXYxMDVINTMweiIgZmlsbD0iIzUyNmE3OCIvPjxyZWN0IHg9IjU3OCIgeT0iMjY1IiB3aWR0aD0iMzUiIGhlaWdodD0iNjUiIGZpbGw9IiNmNWYxZTgiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWU0ZGQiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSI3MCIgeT0iOTUiIHdpZHRoPSI1ODAiIGhlaWdodD0iMjQwIiBmaWxsPSIjOGI3MjU0Ii8+PHJlY3QgeD0iMTEwIiB5PSIxNzUiIHdpZHRoPSIyMjAiIGhlaWdodD0iMTU1IiBmaWxsPSIjYThjNWNlIi8+PHJlY3QgeD0iMzcwIiB5PSIxNzUiIHdpZHRoPSIyNDAiIGhlaWdodD0iMTU1IiBmaWxsPSIjYThjNWNlIi8+PHJlY3QgeD0iNjAiIHk9IjkwIiB3aWR0aD0iNjAwIiBoZWlnaHQ9IjU4IiBmaWxsPSIjZDlkNGM4Ii8+PHRleHQgeD0iMzYwIiB5PSIxMzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyOCIgZmlsbD0iIzFkMWE5YiI+QkFSQkVBUklBPC90ZXh0Pjwvc3ZnPg==", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNkY2RjZTciLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSI3MCIgeT0iOTUiIHdpZHRoPSI1ODAiIGhlaWdodD0iMjQwIiBmaWxsPSIjMWQxYTliIi8+PHJlY3QgeD0iMTEwIiB5PSIxNzUiIHdpZHRoPSIyMjAiIGhlaWdodD0iMTU1IiBmaWxsPSIjYThjNWNlIi8+PHJlY3QgeD0iMzcwIiB5PSIxNzUiIHdpZHRoPSIyNDAiIGhlaWdodD0iMTU1IiBmaWxsPSIjYThjNWNlIi8+PHJlY3QgeD0iNjAiIHk9IjkwIiB3aWR0aD0iNjAwIiBoZWlnaHQ9IjU4IiBmaWxsPSIjZDlkNGM4Ii8+PHRleHQgeD0iMzYwIiB5PSIxMzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyOCIgZmlsbD0iIzFkMWE5YiI+QkFSQkVBUklBPC90ZXh0Pjwvc3ZnPg==", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWVjZWIiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSI3MCIgeT0iOTUiIHdpZHRoPSI1ODAiIGhlaWdodD0iMjQwIiBmaWxsPSIjNDI0YTUwIi8+PHJlY3QgeD0iMTEwIiB5PSIxNzUiIHdpZHRoPSIyMjAiIGhlaWdodD0iMTU1IiBmaWxsPSIjYThjNWNlIi8+PHJlY3QgeD0iMzcwIiB5PSIxNzUiIHdpZHRoPSIyNDAiIGhlaWdodD0iMTU1IiBmaWxsPSIjYThjNWNlIi8+PHJlY3QgeD0iNjAiIHk9IjkwIiB3aWR0aD0iNjAwIiBoZWlnaHQ9IjU4IiBmaWxsPSIjYjJkZjIwIi8+PHRleHQgeD0iMzYwIiB5PSIxMzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyOCIgZmlsbD0iIzFkMWE5YiI+QkFSQkVBUklBPC90ZXh0Pjwvc3ZnPg=="],chair:["data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWVjZWIiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIyMjUiIHk9Ijk1IiB3aWR0aD0iMjcwIiBoZWlnaHQ9IjE3MCIgcng9IjU1IiBmaWxsPSIjNDI0YTUwIiBzdHJva2U9IiMyMzIzMmEiIHN0cm9rZS13aWR0aD0iMTAiLz48cmVjdCB4PSIxOTAiIHk9IjIyMCIgd2lkdGg9IjM0MCIgaGVpZ2h0PSI5NSIgcng9IjM4IiBmaWxsPSIjNDI0YTUwIiBzdHJva2U9IiMyMzIzMmEiIHN0cm9rZS13aWR0aD0iOSIvPjxwYXRoIGQ9Ik0yMTAgMjE1bC0zNSA4NU01MTAgMjE1bDM1IDg1TTM2MCAzMTB2NjVNMjcwIDM4MmgxODAiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyMCIgZmlsbD0ibm9uZSIvPjxyZWN0IHg9IjI3NSIgeT0iMTEwIiB3aWR0aD0iMTcwIiBoZWlnaHQ9IjIwIiByeD0iOCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iLjYiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlMmU3ZWMiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIyMjUiIHk9Ijk1IiB3aWR0aD0iMjcwIiBoZWlnaHQ9IjE3MCIgcng9IjU1IiBmaWxsPSIjNTI2YTc4IiBzdHJva2U9IiMyMzIzMmEiIHN0cm9rZS13aWR0aD0iMTAiLz48cmVjdCB4PSIxOTAiIHk9IjIyMCIgd2lkdGg9IjM0MCIgaGVpZ2h0PSI5NSIgcng9IjM4IiBmaWxsPSIjNTI2YTc4IiBzdHJva2U9IiMyMzIzMmEiIHN0cm9rZS13aWR0aD0iOSIvPjxwYXRoIGQ9Ik0yMTAgMjE1bC0zNSA4NU01MTAgMjE1bDM1IDg1TTM2MCAzMTB2NjVNMjcwIDM4MmgxODAiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyMCIgZmlsbD0ibm9uZSIvPjxyZWN0IHg9IjI3NSIgeT0iMTEwIiB3aWR0aD0iMTcwIiBoZWlnaHQ9IjIwIiByeD0iOCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iLjYiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWU0ZGQiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIyMjUiIHk9Ijk1IiB3aWR0aD0iMjcwIiBoZWlnaHQ9IjE3MCIgcng9IjU1IiBmaWxsPSIjOGI3MjU0IiBzdHJva2U9IiMyMzIzMmEiIHN0cm9rZS13aWR0aD0iMTAiLz48cmVjdCB4PSIxOTAiIHk9IjIyMCIgd2lkdGg9IjM0MCIgaGVpZ2h0PSI5NSIgcng9IjM4IiBmaWxsPSIjOGI3MjU0IiBzdHJva2U9IiMyMzIzMmEiIHN0cm9rZS13aWR0aD0iOSIvPjxwYXRoIGQ9Ik0yMTAgMjE1bC0zNSA4NU01MTAgMjE1bDM1IDg1TTM2MCAzMTB2NjVNMjcwIDM4MmgxODAiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyMCIgZmlsbD0ibm9uZSIvPjxyZWN0IHg9IjI3NSIgeT0iMTEwIiB3aWR0aD0iMTcwIiBoZWlnaHQ9IjIwIiByeD0iOCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iLjYiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNkY2RjZTciLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIyMjUiIHk9Ijk1IiB3aWR0aD0iMjcwIiBoZWlnaHQ9IjE3MCIgcng9IjU1IiBmaWxsPSIjMWQxYTliIiBzdHJva2U9IiMyMzIzMmEiIHN0cm9rZS13aWR0aD0iMTAiLz48cmVjdCB4PSIxOTAiIHk9IjIyMCIgd2lkdGg9IjM0MCIgaGVpZ2h0PSI5NSIgcng9IjM4IiBmaWxsPSIjMWQxYTliIiBzdHJva2U9IiMyMzIzMmEiIHN0cm9rZS13aWR0aD0iOSIvPjxwYXRoIGQ9Ik0yMTAgMjE1bC0zNSA4NU01MTAgMjE1bDM1IDg1TTM2MCAzMTB2NjVNMjcwIDM4MmgxODAiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyMCIgZmlsbD0ibm9uZSIvPjxyZWN0IHg9IjI3NSIgeT0iMTEwIiB3aWR0aD0iMTcwIiBoZWlnaHQ9IjIwIiByeD0iOCIgZmlsbD0iI2IyZGYyMCIgb3BhY2l0eT0iLjYiLz48L3N2Zz4="],bench:["data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWVjZWIiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMTUiIHk9IjE2MCIgd2lkdGg9IjQ5MCIgaGVpZ2h0PSI0NSIgcng9IjgiIGZpbGw9IiM0MjRhNTAiLz48cmVjdCB4PSIxNDUiIHk9IjIwNSIgd2lkdGg9IjQzMCIgaGVpZ2h0PSIxMTAiIGZpbGw9IiM0MjRhNTAiIG9wYWNpdHk9IjAuMTgiLz48cGF0aCBkPSJNMzYwIDIwNXYxMTBNMTYwIDI1N2g0MDAiIHN0cm9rZT0iI2Q2ZDJjYSIgc3Ryb2tlLXdpZHRoPSIwIi8+PHJlY3QgeD0iMjU1IiB5PSIyMTUiIHdpZHRoPSI3MCIgaGVpZ2h0PSIxMiIgcng9IjUiIGZpbGw9IiNiMmRmMjAiLz48cmVjdCB4PSI0MDAiIHk9IjIxNSIgd2lkdGg9IjcwIiBoZWlnaHQ9IjEyIiByeD0iNSIgZmlsbD0iI2IyZGYyMCIvPjwvc3ZnPg==", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlMmU3ZWMiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMTUiIHk9IjE2MCIgd2lkdGg9IjQ5MCIgaGVpZ2h0PSI0NSIgcng9IjgiIGZpbGw9IiM1MjZhNzgiLz48cmVjdCB4PSIxNDUiIHk9IjIwNSIgd2lkdGg9IjQzMCIgaGVpZ2h0PSIxMTAiIGZpbGw9IiM1MjZhNzgiIG9wYWNpdHk9IjAuOSIvPjxwYXRoIGQ9Ik0zNjAgMjA1djExME0xNjAgMjU3aDQwMCIgc3Ryb2tlPSIjZDZkMmNhIiBzdHJva2Utd2lkdGg9IjUiLz48cmVjdCB4PSIyNTUiIHk9IjIxNSIgd2lkdGg9IjcwIiBoZWlnaHQ9IjEyIiByeD0iNSIgZmlsbD0iI2IyZGYyMCIvPjxyZWN0IHg9IjQwMCIgeT0iMjE1IiB3aWR0aD0iNzAiIGhlaWdodD0iMTIiIHJ4PSI1IiBmaWxsPSIjYjJkZjIwIi8+PC9zdmc+", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWU0ZGQiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMTUiIHk9IjE2MCIgd2lkdGg9IjQ5MCIgaGVpZ2h0PSI0NSIgcng9IjgiIGZpbGw9IiM4YjcyNTQiLz48cmVjdCB4PSIxNDUiIHk9IjIwNSIgd2lkdGg9IjQzMCIgaGVpZ2h0PSIxMTAiIGZpbGw9IiM4YjcyNTQiIG9wYWNpdHk9IjAuOSIvPjxwYXRoIGQ9Ik0zNjAgMjA1djExME0xNjAgMjU3aDQwMCIgc3Ryb2tlPSIjZDZkMmNhIiBzdHJva2Utd2lkdGg9IjUiLz48cmVjdCB4PSIyNTUiIHk9IjIxNSIgd2lkdGg9IjcwIiBoZWlnaHQ9IjEyIiByeD0iNSIgZmlsbD0iI2IyZGYyMCIvPjxyZWN0IHg9IjQwMCIgeT0iMjE1IiB3aWR0aD0iNzAiIGhlaWdodD0iMTIiIHJ4PSI1IiBmaWxsPSIjYjJkZjIwIi8+PC9zdmc+", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNkY2RjZTciLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMTUiIHk9IjE2MCIgd2lkdGg9IjQ5MCIgaGVpZ2h0PSI0NSIgcng9IjgiIGZpbGw9IiMxZDFhOWIiLz48cmVjdCB4PSIxNDUiIHk9IjIwNSIgd2lkdGg9IjQzMCIgaGVpZ2h0PSIxMTAiIGZpbGw9IiMxZDFhOWIiIG9wYWNpdHk9IjAuOSIvPjxwYXRoIGQ9Ik0zNjAgMjA1djExME0xNjAgMjU3aDQwMCIgc3Ryb2tlPSIjZDZkMmNhIiBzdHJva2Utd2lkdGg9IjUiLz48cmVjdCB4PSIyNTUiIHk9IjIxNSIgd2lkdGg9IjcwIiBoZWlnaHQ9IjEyIiByeD0iNSIgZmlsbD0iI2IyZGYyMCIvPjxyZWN0IHg9IjQwMCIgeT0iMjE1IiB3aWR0aD0iNzAiIGhlaWdodD0iMTIiIHJ4PSI1IiBmaWxsPSIjYjJkZjIwIi8+PC9zdmc+"],mirror:["data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWVjZWIiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxOTUiIHk9IjQ1IiB3aWR0aD0iMzMwIiBoZWlnaHQ9IjMxNSIgcng9IjQiIGZpbGw9IiM0MjRhNTAiLz48cmVjdCB4PSIxOTkiIHk9IjQ5IiB3aWR0aD0iMzIyIiBoZWlnaHQ9IjMwNyIgcng9IjEyIiBmaWxsPSIjYTlkMWRiIi8+PHBhdGggZD0iTTIyNSAzMDBsMjEwLTIyME0zNDUgMzMwbDEzMC0xNTAiIHN0cm9rZT0id2hpdGUiIG9wYWNpdHk9Ii41NSIgc3Ryb2tlLXdpZHRoPSIxNSIvPjwvc3ZnPg==", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlMmU3ZWMiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxOTUiIHk9IjQ1IiB3aWR0aD0iMzMwIiBoZWlnaHQ9IjMxNSIgcng9IjIwIiBmaWxsPSIjNTI2YTc4Ii8+PHJlY3QgeD0iMjEyIiB5PSI2MiIgd2lkdGg9IjI5NiIgaGVpZ2h0PSIyODEiIHJ4PSIxMiIgZmlsbD0iI2E5ZDFkYiIvPjxwYXRoIGQ9Ik0yMjUgMzAwbDIxMC0yMjBNMzQ1IDMzMGwxMzAtMTUwIiBzdHJva2U9IndoaXRlIiBvcGFjaXR5PSIuNTUiIHN0cm9rZS13aWR0aD0iMTUiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWU0ZGQiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxOTUiIHk9IjQ1IiB3aWR0aD0iMzMwIiBoZWlnaHQ9IjMxNSIgcng9IjIwIiBmaWxsPSIjYjJkZjIwIi8+PHJlY3QgeD0iMjEyIiB5PSI2MiIgd2lkdGg9IjI5NiIgaGVpZ2h0PSIyODEiIHJ4PSIxMiIgZmlsbD0iI2E5ZDFkYiIvPjxwYXRoIGQ9Ik0yMjUgMzAwbDIxMC0yMjBNMzQ1IDMzMGwxMzAtMTUwIiBzdHJva2U9IndoaXRlIiBvcGFjaXR5PSIuNTUiIHN0cm9rZS13aWR0aD0iMTUiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNkY2RjZTciLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxOTUiIHk9IjQ1IiB3aWR0aD0iMzMwIiBoZWlnaHQ9IjMxNSIgcng9IjIwIiBmaWxsPSIjYjJkZjIwIi8+PHJlY3QgeD0iMjEyIiB5PSI2MiIgd2lkdGg9IjI5NiIgaGVpZ2h0PSIyODEiIHJ4PSIxMiIgZmlsbD0iI2E5ZDFkYiIvPjxwYXRoIGQ9Ik0yMjUgMzAwbDIxMC0yMjBNMzQ1IDMzMGwxMzAtMTUwIiBzdHJva2U9IndoaXRlIiBvcGFjaXR5PSIuNTUiIHN0cm9rZS13aWR0aD0iMTUiLz48L3N2Zz4="],waiting:["data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWVjZWIiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMTAiIHk9IjE3NSIgd2lkdGg9IjUwMCIgaGVpZ2h0PSIxNDAiIHJ4PSIxNSIgZmlsbD0iIzQyNGE1MCIvPjxyZWN0IHg9IjExNSIgeT0iMTMwIiB3aWR0aD0iNDkwIiBoZWlnaHQ9IjgwIiByeD0iMzUiIGZpbGw9IiM0MjRhNTAiLz48cGF0aCBkPSJNMTQwIDMxNXYzOE01ODAgMzE1djM4IiBzdHJva2U9IiMzOTM4M2MiIHN0cm9rZS13aWR0aD0iMTUiLz48cGF0aCBkPSJNMjcwIDE5MHYxMTVNNDUwIDE5MHYxMTUiIHN0cm9rZT0iI2Q5ZDlkOSIgc3Ryb2tlLXdpZHRoPSI1Ii8+PC9zdmc+", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlMmU3ZWMiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMTAiIHk9IjE3NSIgd2lkdGg9IjUwMCIgaGVpZ2h0PSIxNDAiIHJ4PSIxNSIgZmlsbD0iIzUyNmE3OCIvPjxyZWN0IHg9IjExNSIgeT0iMTMwIiB3aWR0aD0iNDkwIiBoZWlnaHQ9IjgwIiByeD0iMzUiIGZpbGw9IiM1MjZhNzgiLz48cGF0aCBkPSJNMTQwIDMxNXYzOE01ODAgMzE1djM4IiBzdHJva2U9IiMzOTM4M2MiIHN0cm9rZS13aWR0aD0iMTUiLz48cGF0aCBkPSJNMjcwIDE5MHYxMTVNNDUwIDE5MHYxMTUiIHN0cm9rZT0iI2Q5ZDlkOSIgc3Ryb2tlLXdpZHRoPSI1Ii8+PC9zdmc+", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWU0ZGQiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMTAiIHk9IjE3NSIgd2lkdGg9IjUwMCIgaGVpZ2h0PSIxNDAiIHJ4PSI0OCIgZmlsbD0iIzhiNzI1NCIvPjxyZWN0IHg9IjExNSIgeT0iMTMwIiB3aWR0aD0iNDkwIiBoZWlnaHQ9IjgwIiByeD0iMzUiIGZpbGw9IiM4YjcyNTQiLz48cGF0aCBkPSJNMTQwIDMxNXYzOE01ODAgMzE1djM4IiBzdHJva2U9IiMzOTM4M2MiIHN0cm9rZS13aWR0aD0iMTUiLz48cGF0aCBkPSJNMjcwIDE5MHYxMTVNNDUwIDE5MHYxMTUiIHN0cm9rZT0iI2Q5ZDlkOSIgc3Ryb2tlLXdpZHRoPSI1Ii8+PC9zdmc+", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNkY2RjZTciLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMTAiIHk9IjE3NSIgd2lkdGg9IjUwMCIgaGVpZ2h0PSIxNDAiIHJ4PSI0OCIgZmlsbD0iIzFkMWE5YiIvPjxyZWN0IHg9IjExNSIgeT0iMTMwIiB3aWR0aD0iNDkwIiBoZWlnaHQ9IjgwIiByeD0iMzUiIGZpbGw9IiMxZDFhOWIiLz48cGF0aCBkPSJNMTQwIDMxNXYzOE01ODAgMzE1djM4IiBzdHJva2U9IiMzOTM4M2MiIHN0cm9rZS13aWR0aD0iMTUiLz48cGF0aCBkPSJNMjcwIDE5MHYxMTVNNDUwIDE5MHYxMTUiIHN0cm9rZT0iI2Q5ZDlkOSIgc3Ryb2tlLXdpZHRoPSI1Ii8+PC9zdmc+"],reception:["data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWVjZWIiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMjUiIHk9IjE2MCIgd2lkdGg9IjQ3MCIgaGVpZ2h0PSIxNzAiIHJ4PSI5IiBmaWxsPSIjNDI0YTUwIi8+PHJlY3QgeD0iMTEwIiB5PSIxNDUiIHdpZHRoPSI1MDAiIGhlaWdodD0iMzAiIGZpbGw9IiNmN2Y3ZjciLz48cmVjdCB4PSIyNjUiIHk9IjkwIiB3aWR0aD0iMTkwIiBoZWlnaHQ9IjkwIiByeD0iOCIgZmlsbD0iIzIyMmU0MyIvPjxyZWN0IHg9IjI4MiIgeT0iMTA1IiB3aWR0aD0iMTU2IiBoZWlnaHQ9IjU1IiBmaWxsPSIjOGZjNWQyIi8+PHJlY3QgeD0iMzQwIiB5PSIxODAiIHdpZHRoPSI0NSIgaGVpZ2h0PSIxMiIgZmlsbD0iI2IyZGYyMCIvPjwvc3ZnPg==", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlMmU3ZWMiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMjUiIHk9IjE2MCIgd2lkdGg9IjQ3MCIgaGVpZ2h0PSIxNzAiIHJ4PSI5IiBmaWxsPSIjNTI2YTc4Ii8+PHJlY3QgeD0iMTEwIiB5PSIxNDUiIHdpZHRoPSI1MDAiIGhlaWdodD0iMzAiIGZpbGw9IiNmN2Y3ZjciLz48cmVjdCB4PSIyNjUiIHk9IjkwIiB3aWR0aD0iMTkwIiBoZWlnaHQ9IjkwIiByeD0iOCIgZmlsbD0iIzIyMmU0MyIvPjxyZWN0IHg9IjI4MiIgeT0iMTA1IiB3aWR0aD0iMTU2IiBoZWlnaHQ9IjU1IiBmaWxsPSIjOGZjNWQyIi8+PHJlY3QgeD0iMzQwIiB5PSIxODAiIHdpZHRoPSI0NSIgaGVpZ2h0PSIxMiIgZmlsbD0iI2IyZGYyMCIvPjwvc3ZnPg==", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWU0ZGQiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMjUiIHk9IjE2MCIgd2lkdGg9IjQ3MCIgaGVpZ2h0PSIxNzAiIHJ4PSI5IiBmaWxsPSIjOGI3MjU0Ii8+PHJlY3QgeD0iMTEwIiB5PSIxNDUiIHdpZHRoPSI1MDAiIGhlaWdodD0iMzAiIGZpbGw9IiNmN2Y3ZjciLz48cmVjdCB4PSIyNjUiIHk9IjkwIiB3aWR0aD0iMTkwIiBoZWlnaHQ9IjkwIiByeD0iOCIgZmlsbD0iIzIyMmU0MyIvPjxyZWN0IHg9IjI4MiIgeT0iMTA1IiB3aWR0aD0iMTU2IiBoZWlnaHQ9IjU1IiBmaWxsPSIjOGZjNWQyIi8+PHJlY3QgeD0iMzQwIiB5PSIxODAiIHdpZHRoPSI0NSIgaGVpZ2h0PSIxMiIgZmlsbD0iI2IyZGYyMCIvPjwvc3ZnPg==", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNkY2RjZTciLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIxMjUiIHk9IjE2MCIgd2lkdGg9IjQ3MCIgaGVpZ2h0PSIxNzAiIHJ4PSI5IiBmaWxsPSIjMWQxYTliIi8+PHJlY3QgeD0iMTEwIiB5PSIxNDUiIHdpZHRoPSI1MDAiIGhlaWdodD0iMzAiIGZpbGw9IiNmN2Y3ZjciLz48cmVjdCB4PSIyNjUiIHk9IjkwIiB3aWR0aD0iMTkwIiBoZWlnaHQ9IjkwIiByeD0iOCIgZmlsbD0iIzIyMmU0MyIvPjxyZWN0IHg9IjI4MiIgeT0iMTA1IiB3aWR0aD0iMTU2IiBoZWlnaHQ9IjU1IiBmaWxsPSIjOGZjNWQyIi8+PHJlY3QgeD0iMzQwIiB5PSIxODAiIHdpZHRoPSI0NSIgaGVpZ2h0PSIxMiIgZmlsbD0iI2IyZGYyMCIvPjwvc3ZnPg=="],coffee:["data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWVjZWIiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIyMTUiIHk9Ijg1IiB3aWR0aD0iMjkwIiBoZWlnaHQ9IjI0NSIgcng9IjIwIiBmaWxsPSIjNDI0YTUwIi8+PHJlY3QgeD0iMjUwIiB5PSIxMjUiIHdpZHRoPSIyMjAiIGhlaWdodD0iNzAiIHJ4PSIxMCIgZmlsbD0iIzIwMjYyZSIvPjxyZWN0IHg9IjI5MCIgeT0iMjEwIiB3aWR0aD0iMTQwIiBoZWlnaHQ9Ijg1IiByeD0iMTIiIGZpbGw9IiNmOWY5ZjkiLz48cGF0aCBkPSJNNDMwIDIzMmgzMHY0MGgtMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2Y5ZjlmOSIgc3Ryb2tlLXdpZHRoPSIxMyIvPjxjaXJjbGUgY3g9IjM2MCIgY3k9IjE2MCIgcj0iMTciIGZpbGw9IiNiMmRmMjAiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlMmU3ZWMiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIyMTUiIHk9Ijg1IiB3aWR0aD0iMjkwIiBoZWlnaHQ9IjI0NSIgcng9IjIwIiBmaWxsPSIjNTI2YTc4Ii8+PHJlY3QgeD0iMjUwIiB5PSIxMjUiIHdpZHRoPSIyMjAiIGhlaWdodD0iNzAiIHJ4PSIxMCIgZmlsbD0iIzIwMjYyZSIvPjxyZWN0IHg9IjI5MCIgeT0iMjEwIiB3aWR0aD0iMTQwIiBoZWlnaHQ9Ijg1IiByeD0iMTIiIGZpbGw9IiNmOWY5ZjkiLz48cGF0aCBkPSJNNDMwIDIzMmgzMHY0MGgtMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2Y5ZjlmOSIgc3Ryb2tlLXdpZHRoPSIxMyIvPjxjaXJjbGUgY3g9IjM2MCIgY3k9IjE2MCIgcj0iMTciIGZpbGw9IiNiMmRmMjAiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWU0ZGQiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIyMTUiIHk9Ijg1IiB3aWR0aD0iMjkwIiBoZWlnaHQ9IjI0NSIgcng9IjIwIiBmaWxsPSIjOGI3MjU0Ii8+PHJlY3QgeD0iMjUwIiB5PSIxMjUiIHdpZHRoPSIyMjAiIGhlaWdodD0iNzAiIHJ4PSIxMCIgZmlsbD0iIzIwMjYyZSIvPjxyZWN0IHg9IjI5MCIgeT0iMjEwIiB3aWR0aD0iMTQwIiBoZWlnaHQ9Ijg1IiByeD0iMTIiIGZpbGw9IiNmOWY5ZjkiLz48cGF0aCBkPSJNNDMwIDIzMmgzMHY0MGgtMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2Y5ZjlmOSIgc3Ryb2tlLXdpZHRoPSIxMyIvPjxjaXJjbGUgY3g9IjM2MCIgY3k9IjE2MCIgcj0iMTciIGZpbGw9IiNiMmRmMjAiLz48L3N2Zz4="],facade:["data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWVjZWIiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSI5NSIgeT0iMTAwIiB3aWR0aD0iNTMwIiBoZWlnaHQ9IjI0NSIgZmlsbD0iIzQyNGE1MCIvPjxyZWN0IHg9IjEyMCIgeT0iMTE1IiB3aWR0aD0iNDgwIiBoZWlnaHQ9IjU1IiBmaWxsPSIjZWZlZmVmIi8+PHRleHQgeD0iMzYwIiB5PSIxNTIiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMSIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiMxZDFhOWIiPkJBUkJFQVJJQTwvdGV4dD48cmVjdCB4PSIxNTAiIHk9IjE5NSIgd2lkdGg9IjE5MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNhNGM5ZDAiLz48cmVjdCB4PSIzODUiIHk9IjE5NSIgd2lkdGg9IjE5MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNhNGM5ZDAiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlMmU3ZWMiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSI5NSIgeT0iMTAwIiB3aWR0aD0iNTMwIiBoZWlnaHQ9IjI0NSIgZmlsbD0iIzUyNmE3OCIvPjxyZWN0IHg9IjEyMCIgeT0iMTE1IiB3aWR0aD0iNDgwIiBoZWlnaHQ9IjU1IiBmaWxsPSIjZWZlZmVmIi8+PHRleHQgeD0iMzYwIiB5PSIxNTIiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMSIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiMxZDFhOWIiPkJBUkJFQVJJQTwvdGV4dD48cmVjdCB4PSIxNTAiIHk9IjE5NSIgd2lkdGg9IjE5MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNhNGM5ZDAiLz48cmVjdCB4PSIzODUiIHk9IjE5NSIgd2lkdGg9IjE5MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNhNGM5ZDAiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNlOWU0ZGQiLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSI5NSIgeT0iMTAwIiB3aWR0aD0iNTMwIiBoZWlnaHQ9IjI0NSIgZmlsbD0iIzhiNzI1NCIvPjxyZWN0IHg9IjEyMCIgeT0iMTE1IiB3aWR0aD0iNDgwIiBoZWlnaHQ9IjU1IiBmaWxsPSIjYjJkZjIwIi8+PHRleHQgeD0iMzYwIiB5PSIxNTIiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMSIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiMxZDFhOWIiPkJBUkJFQVJJQTwvdGV4dD48cmVjdCB4PSIxNTAiIHk9IjE5NSIgd2lkdGg9IjE5MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNhNGM5ZDAiLz48cmVjdCB4PSIzODUiIHk9IjE5NSIgd2lkdGg9IjE5MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNhNGM5ZDAiLz48L3N2Zz4=", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjAiIGhlaWdodD0iNDQwIiB2aWV3Qm94PSIwIDAgNzIwIDQ0MCI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0NDAiIGZpbGw9IiNkY2RjZTciLz48cmVjdCB5PSIzMzAiIHdpZHRoPSI3MjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjYzVjOGM3Ii8+PHBhdGggZD0iTTAgMzMwSDcyMCIgc3Ryb2tlPSIjOTY5YjliIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSI5NSIgeT0iMTAwIiB3aWR0aD0iNTMwIiBoZWlnaHQ9IjI0NSIgZmlsbD0iIzFkMWE5YiIvPjxyZWN0IHg9IjEyMCIgeT0iMTE1IiB3aWR0aD0iNDgwIiBoZWlnaHQ9IjU1IiBmaWxsPSIjYjJkZjIwIi8+PHRleHQgeD0iMzYwIiB5PSIxNTIiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMSIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiMxZDFhOWIiPkJBUkJFQVJJQTwvdGV4dD48cmVjdCB4PSIxNTAiIHk9IjE5NSIgd2lkdGg9IjE5MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNhNGM5ZDAiLz48cmVjdCB4PSIzODUiIHk9IjE5NSIgd2lkdGg9IjE5MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNhNGM5ZDAiLz48L3N2Zz4="]};
-function visual(cat,i){return `<img loading="lazy" alt="Ilustração de ${cat} — opção ${i+1}" src="${visualAssets[cat][i]}"/>`;}
-const stages=['Escolha o imóvel','Quantidade de postos','Cadeiras','Bancadas','Espelhos','Sala de espera','Recepção','Café','Fachada','Equipe inicial','Preço do corte','Marketing de inauguração'];
-const actions=[{id:'ads',name:'Tráfego pago local',cost:2000,desc:'Aumenta procura gradualmente; não cria capacidade.',months:[1,3,7,10,15,19,23,27,31,34]},{id:'bigads',name:'Campanha intensiva',cost:5000,desc:'Campanha de maior alcance por alguns meses.',months:[4,11,17,25,32]},{id:'train',name:'Treinar profissional',cost:2500,desc:'Evolui um barbeiro; intervalo mínimo de seis meses.',months:[6,12,18,24,30,35]},{id:'mentor',name:'Mentoria de gestão',cost:8000,desc:'Melhora processos e conversão gradualmente; sem bônus garantido.',months:[9,21]},{id:'insurance',name:'Seguro anual completo',cost:6000,desc:'Cobertura simulada para assalto com franquia; duração de 12 meses.',months:[12,24]},{id:'facade',name:'Melhorar fachada',cost:6000,desc:'Eleva adequação e reputação, sem faturamento automático.',months:[8,20,29]},{id:'maintenance',name:'Manutenção preventiva',cost:2500,desc:'Reduz desgaste e recupera conforto.',months:[6,14,24,30]},{id:'station',name:'Instalar posto completo',cost:0,desc:'Compra cadeira, bancada e espelho conforme sua escolha inicial.',months:[10,18,21,28,33]},{id:'hire',name:'Contratar barbeiro normalmente',cost:0,desc:'Sem taxa de admissão; comissão mensal de 40% a 46% sobre serviços e custo de operação. Não é profissional gratuito.',months:[6,9,12,15,18,21,24,27,30,33,35]},{id:'price',name:'Revisar preço',cost:0,desc:'Corrige posicionamento; pode perder clientes se subir demais.',months:[3,6,9,12,15,18,21,24,27,30,33,35]},{id:'referral',name:'Campanha de indicação',cost:450,desc:'Ação de baixo alcance e sem desembolso inicial.',months:[2,5,8,11,14,17,20,23,26,29,32,35]},{id:'agenda',name:'Reorganizar agenda',cost:650,desc:'Melhora aproveitamento sem criar demanda.',months:[1,4,7,10,13,16,19,22,25,28,31,34]},{id:'cost',name:'Auditoria de desperdícios',cost:900,desc:'Reduz despesas controláveis de modo limitado.',months:[2,6,10,14,18,22,26,30,34]},{id:'rent',name:'Assessoria para renegociar aluguel',cost:1200,desc:'Redução temporária com pagamento futuro; sem perdão de dívida.',months:[9,18,27]},{id:'rebuild',name:'Reconstruir posto danificado',cost:0,desc:'Repõe uma cadeira, bancada e espelho; custo real.',months:[]}];
-const events={3:['Primeiros clientes','O movimento inicial revela horários ociosos.'],6:['Ar-condicionado quebrado','O equipamento parou. Reparo custa R$ 2.500; adiar prejudica conforto.'],9:['Gestão sob pressão','Você percebe falhas de agenda, vendas e treinamento.'],12:['Proteção do patrimônio','É hora de decidir sobre seguro para os próximos 12 meses.'],15:['Risco patrimonial','Uma invasão pode atingir a estrutura; seguro muda o prejuízo.'],18:['Saída de profissional','Um barbeiro pode deixar a equipe. Contratação é normal e gera custos mensais.'],21:['Oportunidade de expansão','A demanda pode justificar um novo posto, mas cadeira vazia não fatura.'],24:['Estrutura envelhecendo','Conservação e renovação do seguro exigem caixa.'],27:['Concorrente na região','Um novo concorrente pressiona sua demanda.'],30:['Reajuste do aluguel','O contrato sofreu reajuste. Reveja margem e custos.'],33:['Proposta ao melhor barbeiro','Seu profissional recebeu uma oferta. Decida como reagir.']};
-const S={stage:0,month:0,cash:100000,point:null,qty:0,choices:{},barbers:[],price:null,marketing:null,actionsUsed:0,used:{},history:[],log:[],reputation:55,demandBonus:0,process:0,training:0,insuranceUntil:0,damaged:0,closed:0,rentDiscount:0,rentDebt:0,ownerDebt:0,profit:0,revenue:0,robbed:false,event:null,eventHandled:false,ready:false};
-function note(t){S.log.unshift('M'+S.month+' — '+t);S.log=S.log.slice(0,100)}function point(){return points[S.point]}function stationCost(){return ['chair','bench','mirror'].reduce((v,k)=>v+catalog[k][S.choices[k]??0][1],0)}function setupTotal(){if(S.point===null)return 0;return point()[1]*3+point()[2]+S.qty*['chair','bench','mirror'].reduce((v,k)=>v+(S.choices[k]===undefined?0:catalog[k][S.choices[k]][1]),0)+['waiting','reception','coffee','facade'].reduce((v,k)=>v+(S.choices[k]===undefined?0:catalog[k][S.choices[k]][1]),0)}function setupBalance(){return 100000-setupTotal()}function confirmChoice(k,i){const delta=(catalog[k][i][1]-(S.choices[k]===undefined?0:catalog[k][S.choices[k]][1]))*(['chair','bench','mirror'].includes(k)?S.qty:1);if(setupBalance()<delta){alert('Saldo insuficiente para esta compra.');return}if(!confirm('Confirmar esta escolha? Depois não será possível voltar.'))return;S.choices[k]=i;S.cash=setupBalance();S.stage++;render()}function choosePoint(i){if(100000<points[i][1]*3+points[i][2]){alert('Capital insuficiente.');return}if(!confirm('Confirmar imóvel e pagar caução + reforma? Esta escolha é definitiva.'))return;S.point=i;S.cash=setupBalance();S.stage=1;render()}function chooseQty(n){if(n*1700>setupBalance()){alert('Caixa insuficiente para os postos básicos.');return}if(!confirm('Confirmar '+n+' postos? A quantidade inicial será definitiva.'))return;S.qty=n;S.cash=setupBalance();S.stage=2;render()}function startTeam(){if(S.barbers.length<1){alert('Contrate pelo menos um barbeiro.');return}if(!confirm('Confirmar equipe inicial?'))return;S.stage=10;render()}function hire(skill){if(S.barbers.length>=S.qty-S.damaged){alert('Não há posto ativo disponível.');return false}if(skill===2&&(S.month<6||S.reputation<70)){alert('Expert exige mês 6, reputação 70 e caixa suficiente.');return false}if(S.month===0&&skill===1&&S.barbers.some(b=>b.skill===1)){alert('Apenas um intermediário na abertura.');return false}S.barbers.push({skill,name:'Barbeiro '+(S.barbers.length+1),commission:skill===0?.40:skill===1?.43:.46});note('Contratou profissional '+['iniciante','intermediário','expert'][skill]+'.');render();return true}function pricePick(v){if(!confirm('Confirmar corte por '+money(v)+'?'))return;S.price=v;S.stage=11;render()}function marketingPick(i){let costs=[300,600,2000,5000];if(setupBalance()<costs[i]){alert('Saldo insuficiente para o marketing.');return;} if(!confirm('Confirmar marketing de '+money(costs[i])+'?'))return;S.marketing=i;S.cash=setupBalance()-costs[i];S.demandBonus+=i===0?10:i===1?18:i===2?40:55;S.stage=12;S.ready=true;note('Inauguração preparada. Marketing: '+money(costs[i]));render()}
-function eventStart(){S.event=null;S.eventHandled=false;const m=S.month;if(m===6)S.event='ac';if(m===15&&!S.robbed){S.robbed=true;S.event='robbery';if(S.insuranceUntil>=m){S.cash-=2000;S.closed=1;note('Assalto coberto: franquia R$ 2.000 e interrupção parcial.')}else{let loss=Math.max(1,Math.ceil(S.qty*.5));S.damaged=Math.min(S.qty,loss);S.cash-=3500;S.closed=2;note('Assalto sem seguro: '+S.damaged+' postos danificados, R$ 3.500 de reparos e atendimento reduzido.')}}if(m===18&&S.barbers.length>1){S.barbers.pop();S.event='departure';note('Um barbeiro saiu da equipe.')}if(m===27){S.demandBonus-=28;S.event='competition';note('Concorrente abriu na região.')}if(m===30){S.event='rent';note('Reajuste contratual de 7% no aluguel.')}if(m===33){S.event='offer';note('Seu melhor barbeiro recebeu uma proposta.')}}
-function actionMenu(){return actions.filter(a=>a.months.includes(S.month)||(a.id==='hire'&&S.barbers.length<S.qty-S.damaged)||(a.id==='rebuild'&&S.damaged>0)||(a.id==='price'&&S.month%3===0)||(a.id==='insurance'&&S.month>=12&&S.insuranceUntil<S.month&&S.month%3===0))}function actionCost(a){return a.id==='station'?stationCost():a.id==='rebuild'?stationCost():a.cost}function eligible(a){if(S.used[a.id]===S.month)return false;if(a.id==='train'&&S.month-(S.used.train||-100)<6)return false;if(a.id==='mentor'&&S.month-(S.used.mentor||-100)<12)return false;if(a.id==='station'&&S.cash<stationCost())return false;if(a.id==='hire'&&S.barbers.length>=S.qty-S.damaged)return false;if(a.id==='insurance'&&S.insuranceUntil>=S.month)return false;if(a.id==='rebuild'&&S.damaged===0)return false;if(a.id==='facade'&&S.choices.facade===3)return false;return true}function take(id){if(S.actionsUsed>=5)return;const a=actions.find(x=>x.id===id);if(!a||!actionMenu().some(x=>x.id===id)||!eligible(a))return;const cost=actionCost(a);if(cost>S.cash){alert('Caixa insuficiente. Investimentos voluntários não são financiados automaticamente.');return}if(!confirm(a.name+' — '+money(cost)+'? A decisão será definitiva.'))return;let success=true;if(id==='hire'){let skill=S.point===4&&S.month>=6&&S.reputation>=70?2:1;success=hire(skill);if(!success)return}else if(id==='price'){let value=Number(prompt('Novo preço: 20, 45, 75 ou 100',S.price));if(![20,45,75,100].includes(value))return;S.price=value;note('Novo preço: '+money(value))}else{S.cash-=cost;switch(id){case'ads':S.demandBonus+=22;break;case'bigads':S.demandBonus+=42;break;case'train':{let b=S.barbers.find(b=>b.skill<2);if(!b){S.cash+=cost;alert('Equipe já está no nível máximo.');return}b.skill++;S.training++;break}case'mentor':S.process+=.065;S.demandBonus+=12;break;case'insurance':S.insuranceUntil=S.month+11;break;case'facade':S.choices.facade++;S.reputation+=3;break;case'maintenance':S.reputation+=2;break;case'station':S.qty++;break;case'referral':S.demandBonus+=9;break;case'agenda':S.process=Math.min(.22,S.process+.012);break;case'cost':S.process=Math.min(.22,S.process+.015);break;case'rent':S.rentDiscount=3;S.rentDebt+=point()[1]*.12*3;break;case'rebuild':S.damaged--;break;}note(a.name+' realizado'+(cost?' por '+money(cost):'')+'.')}S.actionsUsed++;S.used[id]=S.month;render()}
-function resolveEvent(choice){if(S.eventHandled)return;const e=S.event;if(e==='ac'){if(choice===0){if(S.cash<2500){alert('Sem caixa para o conserto. Escolha adiar.');return}S.cash-=2500}else{S.reputation-=5;S.closed=1}}else if(e==='offer'){if(choice===0){if(S.cash<3000){alert('Sem caixa. Escolha outra opção.');return}S.cash-=3000;S.reputation+=2}else if(choice===1){S.reputation-=2}else if(S.barbers.length>1){S.barbers.pop()}}S.eventHandled=true;note('Decisão sobre acontecimento registrada.');render()}
-function monthResult(){const p=point();const active=Math.max(0,Math.min(S.qty-S.damaged,S.barbers.length));let potential=S.barbers.slice(0,active).reduce((v,b)=>v+([95,116,132][b.skill]+(S.point===4?([8,14,20][b.skill]):0)),0);const match= S.point===0?({20:1,45:.84,75:.52,100:.28}[S.price]):S.point===4?({20:.65,45:.8,75:1,100:1.02}[S.price]):({20:.88,45:1,75:.94,100:.57}[S.price]);let base=p[3]+S.demandBonus+S.reputation*.7;let demand=Math.max(0,Math.round(base*match));let cuts=Math.max(0,Math.round(Math.min(demand,potential*(1+S.process))*(S.closed?S.closed===2?.5:.78:1)));let revenue=cuts*S.price;let commission=S.barbers.length?revenue*(S.barbers.reduce((v,b)=>v+b.commission,0)/S.barbers.length):0;let fixed=p[1]*(S.month>=30?1.07:1)+(p[4])+(S.choices.reception===2?2500:S.choices.reception===3?5000:0);let expense=fixed+commission+cuts*3;let profit=revenue-expense;S.cash+=profit;S.profit+=profit;S.revenue+=revenue;S.reputation=clamp(S.reputation+(cuts>0&&match>.75?.45:-.8)-(S.damaged?1:0),0,100);if(S.rentDiscount>0){let saving=p[1]*.12;S.cash+=saving;S.rentDiscount--;}if(S.rentDebt>0&&S.month>=S.used.rent+4){let pay=Math.min(S.rentDebt,300);S.cash-=pay;S.rentDebt-=pay;}S.history.push({month:S.month,revenue,profit,cash:S.cash,cuts,reputation:S.reputation,actions:S.actionsUsed});S.closed=0;S.demandBonus*=.975;note('Fechamento: '+cuts+' cortes, receita '+money(revenue)+', resultado '+money(profit)+'.');S.month++;S.actionsUsed=0;eventStart();render()}
-function advance(){if(S.month===0){S.cash=setupBalance()-[300,600,2000,5000][S.marketing];S.month=1;eventStart();note('Loja inaugurada com '+money(S.cash)+' em caixa.');render();return}if(S.event&&!S.eventHandled&&['ac','offer'].includes(S.event)){alert('Resolva o acontecimento antes de fechar o mês.');return}if(!confirm('Encerrar mês '+S.month+'? As escolhas deste mês serão definitivas.'))return;monthResult()}
-function card(title,desc,cost,fn,disabled=false,tag='',image=''){return `<div class="tile">${image}<h3>${title}</h3><p>${desc}</p><strong>${cost===null?'':money(cost)}</strong>${tag?`<span class="tiny">${tag}</span>`:''}<button ${disabled?'disabled':''} onclick="${fn}">${disabled?'Indisponível':'Escolher e confirmar'}</button></div>`}function summary(){if(!S.ready)S.cash=S.point===null?100000:setupBalance();return `<div class="bar"><div class="stat">Caixa disponível / saldo atualizado<b class="${S.cash<0?'bad':''}">${money(S.cash)}</b></div><div class="stat">${S.month?'Mês':'Capital inicial'}<b>${S.month||'R$ 100 mil'}${S.month?' / 36':''}</b></div><div class="stat">Profissionais / postos<b>${S.barbers.length} / ${S.qty-S.damaged}</b></div><div class="stat">Reputação<b>${Math.round(S.reputation)}/100</b></div></div>`}function render(){let h=summary();if(!S.ready){h+=`<section><h2>Montagem • ${stages[S.stage]}</h2><div class="progress"><span style="width:${S.stage/12*100}%"></span></div><p class="alert"><b>Capital inicial: R$ 100.000</b> · Total já comprometido: ${money(100000-(S.point===null?100000:setupBalance()))} · <b>Saldo disponível agora: ${money(S.point===null?100000:setupBalance())}</b>. Cada compra será descontada ao confirmar.</p>`;if(S.stage===0)h+=`<div class="grid">${points.map((p,i)=>card(p[0],p[5]+' Aluguel '+money(p[1])+'/mês; caução '+money(p[1]*3)+'; reforma '+money(p[2])+'.',p[1]*3+p[2],`choosePoint(${i})`,false,'',visual('point',i))).join('')}</div>`;else if(S.stage===1)h+=`<div class="grid">${[3,5,7,10].map(n=>card(n+' postos','Cada posto exige cadeira, bancada e espelho.',n*1700,`chooseQty(${n})`,setupBalance()<n*1700)).join('')}</div>`;else if(S.stage>=2&&S.stage<=8){const k=['chair','bench','mirror','waiting','reception','coffee','facade'][S.stage-2];h+=`<div class="grid">${catalog[k].map((o,i)=>card(o[0],k==='coffee'?'Compra única; sem custo mensal de café no jogo.':k==='reception'&&i>=2?'Inclui despesa mensal de equipe.':'Modelo '+(i+1)+' de '+catalog[k].length+'.',o[1]*(S.stage<=4?S.qty:1),`confirmChoice('${k}',${i})`,setupBalance()<o[1]*(S.stage<=4?S.qty:1),'',visual(k,i))).join('')}</div>`}else if(S.stage===9)h+=`<p>Equipe inicial: iniciantes e no máximo um intermediário. Expert somente após seis meses, reputação 70 e caixa suficiente.</p><div class="grid">${[0,1].map(i=>card(['Iniciante','Intermediário'][i],'Comissão mensal sobre o faturamento: '+(i?43:40)+'%.',0,`hire(${i})`,S.barbers.length>=S.qty||(i===1&&S.barbers.some(b=>b.skill===1)))).join('')}</div><p>Contratados: ${S.barbers.length} / ${S.qty}</p><button onclick="startTeam()" ${S.barbers.length?'':'disabled'}>Confirmar equipe e continuar</button>`;else if(S.stage===10)h+=`<div class="grid">${[20,45,75,100].map(v=>card('Corte '+money(v),'Preço altera demanda, faturamento e adequação ao público.',v,`pricePick(${v})`)).join('')}</div>`;else if(S.stage===11)h+=`<div class="grid">${['Cartazes de rua','Parcerias locais','Tráfego pago','Influenciador'].map((t,i)=>card(t,'Ação de divulgação de inauguração; custo descontado imediatamente.',[300,600,2000,5000][i],`marketingPick(${i})`,setupBalance()<[300,600,2000,5000][i])).join('')}</div>`;h+='</section>'}else if(S.month>36){let last=S.history[S.history.length-1];h+=`<section><h2>Resultado final • 36 meses</h2><p>Você chegou ao fim mesmo que tenha acumulado dívidas.</p><div class="bar"><div class="stat">Faturamento total<b>${money(S.revenue)}</b></div><div class="stat">Resultado operacional acumulado<b>${money(S.profit)}</b></div><div class="stat">Caixa final<b>${money(S.cash)}</b></div><div class="stat">Reputação<b>${Math.round(S.reputation)}/100</b></div></div><h3>Resultados por ano</h3>${[0,1,2].map(i=>{let a=S.history.slice(i*12,i*12+12);return `<p>Ano ${i+1}: faturamento ${money(a.reduce((v,x)=>v+x.revenue,0))} • resultado ${money(a.reduce((v,x)=>v+x.profit,0))} • caixa ${money(a[a.length-1].cash)}</p>`}).join('')}<button onclick="location.reload()">Jogar novamente</button></section>`}else{h+=`<section><h2>Mês ${S.month} de 36</h2><p>Até cinco ações neste mês. Investimentos pagos exigem caixa disponível; despesas operacionais podem deixar o saldo negativo. Não existe falência antecipada.</p><div class="bar"><div class="stat">Ações realizadas<b>${S.actionsUsed}/5</b></div><div class="stat">Preço do corte<b>${money(S.price)}</b></div><div class="stat">Postos danificados<b>${S.damaged}</b></div><div class="stat">Seguro válido até<b>${S.insuranceUntil>=S.month?'Mês '+S.insuranceUntil:'Sem cobertura'}</b></div></div>${events[S.month]?`<p class="alert"><b>${events[S.month][0]}:</b> ${events[S.month][1]}</p>`:''}${S.event==='robbery'?`<p class="alert">${S.insuranceUntil>=S.month?'O seguro cobriu os equipamentos, com franquia e dias perdidos.':'Sem seguro: reconstrua postos com dinheiro próprio. Enquanto isso, a capacidade de atendimento fica reduzida.'}</p>`:''}${S.event==='ac'&&!S.eventHandled?`<div class="grid">${card('Consertar ar-condicionado','Restaura conforto.',2500,'resolveEvent(0)',S.cash<2500)}${card('Adiar reparo','Perde reputação e parte dos atendimentos.',0,'resolveEvent(1)')}</div>`:''}${S.event==='offer'&&!S.eventHandled?`<div class="grid">${card('Investir na retenção','Desenvolvimento e negociação.',3000,'resolveEvent(0)',S.cash<3000)}${card('Conversar e manter condições','Risco de insatisfação.',0,'resolveEvent(1)')}${card('Aceitar possível saída','Perde um profissional se houver mais de um.',0,'resolveEvent(2)')}</div>`:''}<h3>Oportunidades deste mês</h3><div class="grid">${actionMenu().map(a=>card(a.name,a.desc,actionCost(a),`take('${a.id}')`,!eligible(a)||actionCost(a)>S.cash||S.actionsUsed>=5,actionCost(a)>S.cash?'Sem caixa':'Disponível conforme calendário')).join('')}</div><hr/><button onclick="advance()">${S.month===36?'Concluir 36 meses':'Encerrar mês e ver resultado'}</button>${S.history.length?`<p class="muted">Último fechamento: ${money(S.history[S.history.length-1].revenue)} faturados; ${money(S.history[S.history.length-1].profit)} de resultado.</p>`:''}</section>`}h+=`<section><h3>Histórico de decisões e resultados</h3><div class="log">${S.log.length?S.log.map(x=>`<p>${x}</p>`).join(''):'Suas escolhas aparecerão aqui.'}</div></section>`;document.getElementById('app').innerHTML=h}render();
-</script></body></html>
+const SCHEMA = 8, START_CASH = 100000, MAX_ACTIONS = 5, LAST_MONTH = 36;
+
+const POINTS = [
+  { id:'centro', name:'Centro comercial', rent:5000, reform:10000, demand:1250, fixed:3300, rob:.018,
+    fit:{20:1,45:.84,75:.52,100:.28}, img:'ponto_centro',
+    desc:'Fluxo muito alto de pedestres e muita concorrência. Público sensível a preço.' },
+  { id:'residencial', name:'Bairro residencial (só casas)', rent:2500, reform:8000, demand:310, fixed:2000, rob:.008,
+    fit:{20:.9,45:1,75:.8,100:.45}, img:'ponto_residencial',
+    desc:'Clientes da vizinhança, fiéis e com pouca rotatividade. Demanda pequena.' },
+  { id:'misto', name:'Bairro misto', rent:4000, reform:12000, demand:430, fixed:2700, rob:.012,
+    fit:{20:.88,45:1,75:.94,100:.57}, img:'ponto_misto',
+    desc:'Lojas no térreo e prédios residenciais e comerciais. Público variado.' },
+  { id:'secundaria', name:'Rua secundária tranquila', rent:3000, reform:9000, demand:360, fixed:2300, rob:.009,
+    fit:{20:.9,45:1,75:.9,100:.5}, img:'ponto_secundaria',
+    desc:'Casa adaptada com entrada comercial. Fluxo moderado, custo menor.' },
+  { id:'luxo', name:'Região de alto padrão', rent:8000, reform:20000, demand:320, fixed:2700, rob:.015,
+    fit:{20:.6,45:.8,75:1,100:1.02}, img:'ponto_luxo',
+    desc:'Público exigente que paga mais e espera experiência completa. Custos altos.' },
+];
+
+// tier = posição 0..n-1; unit = preço didático
+const CATALOG = {
+  chair:[
+    {name:'Cadeira básica simples', unit:1200, img:'cadeira_1_basica', desc:'Econômica, sem acabamento elaborado.'},
+    {name:'Cadeira intermediária capitonê', unit:2500, img:'cadeira_2_capitone', desc:'Estofado capitonê, mais conforto.'},
+    {name:'Cadeira superior modelo Texas', unit:4000, img:'cadeira_3_texas', desc:'Estrutura robusta e reclinável.'},
+    {name:'Cadeira luxo preta e dourada', unit:6000, img:'cadeira_4_luxo', desc:'Preço didático: modelos de luxo reais custam bem mais.'},
+  ],
+  bench:[
+    {name:'Prateleira simples', unit:300, img:'bancada_1_prateleira', desc:'Apoio básico de parede.'},
+    {name:'Bancada suspensa com duas gavetas', unit:800, img:'bancada_2_gavetas', desc:'Organiza ferramentas do posto.'},
+    {name:'Armário completo', unit:1500, img:'bancada_3_armario', desc:'Guarda produtos e toalhas.'},
+    {name:'Bancada sofisticada', unit:2500, img:'bancada_4_sofisticada', desc:'Acabamento nobre.'},
+  ],
+  mirror:[
+    {name:'Espelho sem moldura', unit:200, img:'espelho_1_simples', desc:'Funcional.'},
+    {name:'Espelho com moldura preta', unit:500, img:'espelho_2_moldura', desc:'Visual mais cuidado.'},
+    {name:'Espelho com LED', unit:1000, img:'espelho_3_led', desc:'Melhor iluminação do corte.'},
+    {name:'Espelho luxo com LED', unit:1500, img:'espelho_4_luxo', desc:'Peça de destaque.'},
+  ],
+  waiting:[
+    {name:'Seis cadeiras simples', unit:600, img:'espera_1_simples', desc:'Compra única.'},
+    {name:'Cadeiras confortáveis', unit:1500, img:'espera_2_confortavel', desc:'Compra única.'},
+    {name:'Sofá e poltronas', unit:3000, img:'espera_3_sofa', desc:'Compra única.'},
+    {name:'Sala de espera luxo', unit:5000, img:'espera_4_luxo', desc:'Compra única.'},
+  ],
+  reception:[
+    {name:'Usar seu notebook', unit:0, monthly:0, conv:-.03, img:'recepcao_1_notebook', desc:'Você já tem o notebook. Sem recepcionista: agenda feita entre um corte e outro, perde ~3% dos agendamentos.'},
+    {name:'Totem de autoatendimento', unit:3000, monthly:0, conv:0, img:'recepcao_2_totem', desc:'Cliente faz o check-in sozinho. Sem custo mensal.'},
+    {name:'Balcão + recepcionista', unit:2000, monthly:2500, conv:.04, img:'recepcao_3_balcao', desc:'R$ 2.000 do balcão agora + R$ 2.500/mês de salário.'},
+    {name:'Recepção luxo + duas recepcionistas', unit:5000, monthly:5000, conv:.07, img:'recepcao_4_luxo', desc:'R$ 5.000 do móvel agora + R$ 5.000/mês de salários.'},
+  ],
+  coffee:[
+    {name:'Garrafa térmica', unit:100, img:'cafe_1_garrafa', desc:'Compra única. Consumo de café já incluso nos custos fixos.'},
+    {name:'Cafeteira simples', unit:500, img:'cafe_2_cafeteira', desc:'Compra única. Consumo de café já incluso nos custos fixos.'},
+    {name:'Máquina automática de grãos', unit:3000, img:'cafe_3_graos', desc:'Compra única. Consumo de café já incluso nos custos fixos.'},
+  ],
+  facade:[
+    {name:'Pintura e logotipo', unit:2000, img:'fachada_1_pintura', desc:'Identificação básica.'},
+    {name:'Pintura e vitrine', unit:5000, img:'fachada_2_vitrine', desc:'Quem passa vê o interior.'},
+    {name:'Revestimento ACM', unit:8000, img:'fachada_3_acm', desc:'Visual moderno e durável.'},
+    {name:'Fachada luxo', unit:12000, img:'fachada_4_luxo', desc:'Alto impacto visual.'},
+  ],
+};
+const OPEN_MKT = [
+  {name:'Cartazes na região', unit:300, boost:.04, months:2, desc:'+4% de procura por 2 meses.'},
+  {name:'Parcerias locais', unit:600, boost:.07, months:3, desc:'+7% de procura por 3 meses.'},
+  {name:'Tráfego pago', unit:2000, boost:.12, months:3, desc:'+12% de procura por 3 meses.'},
+  {name:'Influenciador', unit:5000, boost:.20, months:2, rep:2, desc:'+20% de procura por 2 meses e +2 de reputação.'},
+];
+const PRICES = [20,45,75,100];
+const LEVELS = [
+  {name:'Iniciante', prod:95, rate:.40, floor:900},
+  {name:'Intermediário', prod:116, rate:.43, floor:1200},
+  {name:'Expert', prod:132, rate:.46, floor:1600},
+];
+const PRICE_SPEED = {20:1.45,45:1.15,75:1,100:.9};   // corte barato = serviço mais rápido
+const EXPECTED_Q = {20:0,45:.3,75:.55,100:.75};      // expectativa de estrutura por faixa de preço
+const SEASON = [1,.94,.97,1,1,.97,1.02,1,.98,1.02,1.04,1.1];
+const VAR_COST = 3, OVERDRAFT = .03;
+
+const STEPS = [
+  {id:'point', title:'Imóvel'}, {id:'qty', title:'Quantidade de postos'},
+  {id:'chair', title:'Cadeiras', perStation:true}, {id:'bench', title:'Bancadas', perStation:true},
+  {id:'mirror', title:'Espelhos', perStation:true}, {id:'waiting', title:'Sala de espera'},
+  {id:'reception', title:'Recepção'}, {id:'coffee', title:'Café'}, {id:'facade', title:'Fachada'},
+  {id:'team', title:'Equipe inicial'}, {id:'price', title:'Preço do corte'},
+  {id:'marketing', title:'Marketing de inauguração'}, {id:'review', title:'Resumo e inauguração'},
+];
+
+/* ---------- utilidades ---------- */
+function rnd(s){ s.rngN++; let t=(s.seed ^ Math.imul(s.rngN,0x9E3779B1))>>>0;
+  t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }
+const R = x => Math.round(x);
+function post(s, cat, desc, amount){
+  amount = R(amount); if(!amount) return null;
+  const before = s.cash; s.cash += amount;
+  const e = {n:s.ledger.length+1, m:s.month, cat, desc, amount, before, after:s.cash};
+  s.ledger.push(e); return e;
+}
+function reconcile(s){ return s.cash - (START_CASH + s.ledger.reduce((a,e)=>a+e.amount,0)); }
+
+function newGame(seed){
+  seed = (seed===undefined ? Math.floor(Math.random()*2**31) : seed)>>>0;
+  return { schema:SCHEMA, seed, rngN:0, phase:'setup', step:0, month:0, cash:START_CASH, ledger:[],
+    point:null, qty:0, tiers:{}, marketing:null, price:null, barbers:[], nextBarberId:1,
+    reputation:50, boosts:[], capBoosts:[], mentorUntil:0, loyalty:false, insurance:null,
+    damaged:[], acBroken:false, lastMaint:0, wasteCuts:0, rentFactor:1, retentionUntil:0,
+    competition:false, robbed:false, acts:[], lastUsed:{}, pending:null, events:[], notes:[],
+    history:[], reports:[], closure:0, invested:0 };
+}
+function pt(s){ return POINTS[s.point]; }
+function stationUnit(s){ return ['chair','bench','mirror'].reduce((a,k)=>a+CATALOG[k][s.tiers[k]].unit,0); }
+function minStation(){ return CATALOG.chair[0].unit+CATALOG.bench[0].unit+CATALOG.mirror[0].unit; }
+
+/* custo mínimo das etapas obrigatórias que ainda faltam (garante que ninguém trava na montagem) */
+function minRest(s, fromStep, qty){
+  qty = qty ?? s.qty; let t=0;
+  for(let i=fromStep;i<STEPS.length;i++){
+    const id=STEPS[i].id;
+    if(CATALOG[id]) t += Math.min(...CATALOG[id].map(o=>o.unit)) * (STEPS[i].perStation?qty:1);
+    if(id==='marketing') t += OPEN_MKT[0].unit;
+  }
+  return t;
+}
+
+/* ---------- MONTAGEM ---------- */
+function setupOptions(s){
+  const st = STEPS[s.step]; if(!st) return [];
+  const rest = minRest(s, s.step+1);
+  const avail = s.cash - rest;
+  if(st.id==='point') return POINTS.map((p,i)=>{ const total=p.rent*3+p.reform;
+    return {i, name:p.name, desc:p.desc, img:p.img, total, lines:[`Caução 3 × ${p.rent} = ${p.rent*3}`,`Reforma ${p.reform}`],
+      monthly:p.rent+p.fixed, ok: total + minRest(s,1,1) <= s.cash }; });
+  if(CATALOG[st.id]) return CATALOG[st.id].map((o,i)=>{ const mult = st.perStation? s.qty:1; const total=o.unit*mult;
+    return {i, name:o.name, desc:o.desc, img:o.img, unit:o.unit, mult, total, monthly:o.monthly||0,
+      ok: total <= avail, reason: total<=avail ? '' : 'Caixa insuficiente mantendo o mínimo para as próximas etapas' }; });
+  if(st.id==='price') return PRICES.map((v,i)=>({i, value:v, name:`Corte a ${v}`, total:0, ok:true,
+      fit: pt(s).fit[v], expQ: EXPECTED_Q[v]}));
+  if(st.id==='marketing') return OPEN_MKT.map((o,i)=>({i, name:o.name, desc:o.desc, unit:o.unit, total:o.unit, ok:o.unit<=s.cash-rest}));
+  return [];
+}
+function maxQty(s){ // quantos postos básicos cabem no caixa com o mínimo do restante
+  let n=0; while(minRest(s,2,n+1) <= s.cash) n++; return n;
+}
+function setupConfirm(s, arg){
+  const st = STEPS[s.step]; if(s.phase!=='setup'||!st) return {ok:false, err:'Montagem já concluída.'};
+  const before = s.cash; let cost=0, label='';
+  if(st.id==='point'){
+    const o = setupOptions(s)[arg]; if(!o) return {ok:false,err:'Opção inválida.'};
+    if(!o.ok) return {ok:false, err:'Caixa insuficiente para este imóvel.'};
+    const p = POINTS[arg]; s.point=arg;
+    post(s,'abertura',`Caução do imóvel (3 × aluguel de ${p.rent})`, -p.rent*3);
+    post(s,'abertura',`Reforma e adequação — ${p.name}`, -p.reform);
+    cost=p.rent*3+p.reform; label=p.name;
+  } else if(st.id==='qty'){
+    const n = Math.floor(Number(arg));
+    if(!(n>=1)) return {ok:false, err:'Informe pelo menos 1 posto.'};
+    if(minRest(s,2,n) > s.cash) return {ok:false, err:`Com o caixa atual cabem no máximo ${maxQty(s)} postos (na versão mais simples).`};
+    s.qty=n; label=`${n} postos`;
+  } else if(CATALOG[st.id]){
+    const o = setupOptions(s)[arg]; if(!o) return {ok:false,err:'Opção inválida.'};
+    if(!o.ok) return {ok:false, err:o.reason};
+    s.tiers[st.id]=arg; cost=o.total; label=o.name;
+    post(s,'abertura', st.perStation? `${o.name} (${o.mult} × ${o.unit})` : o.name, -o.total);
+  } else if(st.id==='team'){
+    const lv = (arg||[]).map(Number);
+    if(lv.length<1) return {ok:false, err:'Contrate pelo menos um profissional.'};
+    if(lv.length> s.qty) return {ok:false, err:'Não é possível ter mais profissionais do que postos.'};
+    if(lv.some(l=>l!==0&&l!==1)) return {ok:false, err:'Na abertura só é possível contratar iniciantes e um intermediário.'};
+    if(lv.filter(l=>l===1).length>1) return {ok:false, err:'No máximo um intermediário na abertura.'};
+    lv.forEach(l=>addBarber(s,l)); label=`${lv.length} profissionais`;
+  } else if(st.id==='price'){
+    const v = PRICES[arg]; if(!v) return {ok:false, err:'Preço inválido.'};
+    s.price=v; label=`Corte a ${v}`;
+  } else if(st.id==='marketing'){
+    const o = setupOptions(s)[arg]; if(!o||!o.ok) return {ok:false, err:'Caixa insuficiente para esta divulgação.'};
+    s.marketing=arg; const m=OPEN_MKT[arg]; cost=m.unit; label=m.name;
+    post(s,'abertura',`Marketing de inauguração — ${m.name}`, -m.unit);
+    s.boosts.push({from:1, to:m.months, pct:m.boost, src:m.name});
+    if(m.rep) s.reputation += m.rep;
+  } else if(st.id==='review'){
+    if(!(s.point!==null && s.qty>=1 && ['chair','bench','mirror','waiting','reception','coffee','facade'].every(k=>s.tiers[k]!==undefined)
+       && s.barbers.length && s.price && s.marketing!==null)) return {ok:false, err:'Existe etapa incompleta.'};
+    s.invested = -s.ledger.filter(e=>e.cat==='abertura').reduce((a,e)=>a+e.amount,0);
+    s.phase='month'; s.month=1; startMonth(s);
+    return {ok:true, before, cost:0, after:s.cash, label:'Inauguração'};
+  }
+  s.step++;
+  return {ok:true, before, cost, after:s.cash, label};
+}
+function addBarber(s,l){ s.barbers.push({id:s.nextBarberId++, level:l, bonus:0, since:s.month}); }
+
+/* ---------- MODELO DE OPERAÇÃO ---------- */
+function quality(s){
+  const t=s.tiers, n=k=>(t[k]??0)/(CATALOG[k].length-1);
+  return .25*n('chair')+.1*n('bench')+.1*n('mirror')+.15*n('waiting')+.15*n('reception')+.1*n('coffee')+.15*n('facade');
+}
+function activeBoost(list, m){ return list.filter(b=>m>=b.from&&m<=b.to).reduce((a,b)=>a+b.pct,0); }
+function operational(s){ return s.qty - s.damaged.length; }
+function barberCap(s,b){
+  let c = LEVELS[b.level].prod * PRICE_SPEED[s.price];
+  if(pt(s).id==='luxo') c*=1.05;
+  return c;
+}
+function forecast(s, m, noise=1){
+  const p=pt(s), Q=quality(s), expQ=EXPECTED_Q[s.price];
+  const ramp=Math.min(1,.46+.09*m), season=SEASON[(m-1)%12];
+  const expF = Q>=expQ ? 1+Math.min(.08,(Q-expQ)*.15) : 1-.45*(expQ-Q);
+  const repF = .8 + s.reputation/250;
+  const mkt = Math.min(.30, activeBoost(s.boosts,m));
+  const mentor = m<=s.mentorUntil ? .10 : 0;
+  const loyal = s.loyalty ? .04 : 0;
+  const comp = s.competition ? (s.loyalty ? .96 : .92) : 1;
+  const facade = (s.tiers.facade??0)*.02;
+  const conv = 1 + CATALOG.reception[s.tiers.reception??0].conv;
+  const demand = p.demand*p.fit[s.price]*ramp*season*expF*repF*(1+mkt)*(1+mentor+loyal+facade)*comp*conv*noise;
+  // capacidade: melhores profissionais ocupam os postos operacionais
+  const seats = Math.max(0, operational(s));
+  const working = [...s.barbers].sort((a,b)=>barberCap(s,b)-barberCap(s,a)).slice(0,seats);
+  let capBoost = Math.min(.15, activeBoost(s.capBoosts,m) + (m<=s.mentorUntil?.10:0));
+  let capF = (1+capBoost) * (s.acBroken?.9:1) * (m-s.lastMaint>12 && m>12 ? .97:1) * (1-s.closure);
+  const caps = working.map(b=>({b, cap:barberCap(s,b)*capF}));
+  const capacity = caps.reduce((a,x)=>a+x.cap,0);
+  return {demand:Math.max(0,demand), capacity, caps, Q, expQ, fit:p.fit[s.price]};
+}
+function payroll(s, caps, revenue, capacity){
+  let total=0; const lines=[];
+  const workIds = new Set(caps.map(x=>x.b.id));
+  for(const b of s.barbers){
+    const L=LEVELS[b.level]; const x=caps.find(c=>c.b.id===b.id);
+    const share = x && capacity>0 ? revenue*x.cap/capacity : 0;
+    const pay = R(Math.max(L.floor, share*(L.rate+b.bonus)));
+    total+=pay; lines.push({b, pay, working:workIds.has(b.id)});
+  }
+  return {total, lines};
+}
+function commitments(s){
+  if(s.point===null) return 0;
+  const p=pt(s); let c = R(p.rent*s.rentFactor) + p.fixed;
+  if(s.tiers.reception!==undefined) c += CATALOG.reception[s.tiers.reception].monthly;
+  c += s.barbers.reduce((a,b)=>a+LEVELS[b.level].floor,0);
+  return c;
+}
+
+/* ---------- EVENTOS ---------- */
+function startMonth(s){
+  const m=s.month; s.acts=[]; s.events=[]; s.pending=null; s.closure=0;
+  const ev=(t,txt,kind='info')=>s.events.push({t,txt,kind});
+  if(m===3) ev('Primeiros clientes','Os primeiros meses mostram horários ociosos no meio da semana. Observe a diferença entre procura e capacidade no fechamento.');
+  if(m===6){ ev('Ar-condicionado quebrou','O aparelho parou de funcionar. Decida agora.','alert');
+    s.pending={id:'ac', title:'Ar-condicionado quebrou', options:[
+      {id:'fix', label:'Consertar agora', cost:2500, desc:'Resolve o problema hoje.'},
+      {id:'delay', label:'Adiar o conserto', cost:0, desc:'−10% de capacidade e −1 de reputação por mês até consertar (conserto depois custa R$ 3.000).'}]}; }
+  if(m===9) ev('Gestão sob pressão','Agenda, vendas e treinamento começam a pesar. A mentoria está disponível neste mês.');
+  if(m===12) ev('Proteção do patrimônio','Seguro anual passa a estar disponível (básico ou completo).');
+  if(m>=13 && m<=33 && !s.robbed && rnd(s) < pt(s).rob){
+    s.robbed=true; robbery(s);
+  }
+  if(m===18){
+    const p = s.barbers.length>=2 ? (m<=s.retentionUntil ? .25 : .6) : 0;
+    if(p && rnd(s)<p){ const idx=Math.floor(rnd(s)*s.barbers.length); const b=s.barbers.splice(idx,1)[0];
+      ev('Saída de profissional',`${LEVELS[b.level].name} (profissional ${b.id}) pediu para sair. O posto fica livre: você pode contratar normalmente.`,'alert'); }
+    else ev('Equipe ficou', s.barbers.length>=2 ? 'Houve rumores de saída, mas a equipe permaneceu.' : 'Com um único profissional, não houve saída.');
+  }
+  if(m===21) ev('Oportunidade de expansão','Se a procura supera sua capacidade, um novo posto pode valer a pena. Posto vazio não fatura.');
+  if(m===24){ if(m-s.lastMaint>12){ s.reputation-=3; ev('Estrutura envelhecendo','Sem manutenção há mais de 12 meses: −3 de reputação.','alert'); }
+    else ev('Estrutura em dia','A manutenção recente evitou desgaste.'); }
+  if(m===27){ s.competition=true; ev('Concorrente na região', s.loyalty?'Um concorrente abriu perto. Seu programa de fidelidade reduz a perda (−4% de procura).':'Um concorrente abriu perto: −8% de procura daqui em diante.','alert'); }
+  if(m===30){ s.rentFactor*=1.07; ev('Reajuste do aluguel','O contrato foi reajustado em 7%.','alert'); }
+  if(m===33 && s.barbers.length){
+    const best=[...s.barbers].sort((a,b)=>b.level-a.level)[0];
+    s.pending={id:'offer', title:`Proposta ao seu ${LEVELS[best.level].name.toLowerCase()}`, barber:best.id, options:[
+      {id:'raise', label:'Aumentar comissão em 3 pontos', cost:0, desc:'Ele fica. Custo mensal maior até o fim.'},
+      {id:'bonus', label:'Pagar bônus de retenção', cost:3000, desc:'Ele fica. Pagamento único de R$ 3.000.'},
+      {id:'let', label:'Deixar sair', cost:0, desc:'Perde o profissional e −2 de reputação.'}]};
+    ev('Proposta de concorrente','Seu profissional mais experiente recebeu uma oferta. Decida antes de fechar o mês.','alert');
+  }
+  if(m===36) ev('Último mês','Após este fechamento o jogo mostra seu resultado de 36 meses.');
+}
+function robbery(s){
+  const ins = s.insurance && s.month<=s.insurance.until ? s.insurance : null;
+  const k = Math.max(1, R(s.qty*.4));
+  if(ins){
+    const fr = ins.plan==='full'?1000:2000;
+    post(s,'evento',`Assalto — franquia do seguro ${ins.plan==='full'?'completo':'básico'}`, -fr);
+    if(ins.plan==='basic'){ // cobre metade dos itens
+      const loss = k*stationUnit(s); post(s,'evento',`Assalto — parte não coberta pelo seguro básico (50% de ${k} posto(s))`, -loss*.5);
+    }
+    s.closure = ins.plan==='full'?.1:.15;
+    s.events.push({t:'Assalto',txt:`A barbearia foi assaltada. O seguro cobriu os equipamentos; houve franquia e ${Math.round(s.closure*100)}% de atendimentos perdidos neste mês.`,kind:'alert'});
+  } else {
+    const items=['chair','bench','mirror'];
+    for(let i=0;i<k && s.damaged.length<s.qty;i++){
+      const d={}; items.forEach(it=>d[it]=rnd(s)<.6); if(!items.some(it=>d[it])) d.chair=true; s.damaged.push(d);
+    }
+    post(s,'evento','Assalto — dinheiro do caixa do dia levado', -1500);
+    s.closure=.25; s.reputation-=3;
+    const desc = s.damaged.map((d,i)=>`posto ${i+1}: ${['chair','bench','mirror'].filter(x=>d[x]).map(x=>({chair:'cadeira',bench:'bancada',mirror:'espelho'}[x])).join(', ')}`).join('; ');
+    s.events.push({t:'Assalto sem seguro',txt:`Itens danificados (${desc}). ${s.damaged.length} posto(s) parados até a reconstrução, paga com seu caixa. Neste mês 25% dos atendimentos foram perdidos.`,kind:'alert'});
+  }
+}
+function resolvePending(s, optId){
+  const p=s.pending; if(!p) return {ok:false, err:'Nada pendente.'};
+  const o=p.options.find(x=>x.id===optId); if(!o) return {ok:false, err:'Opção inválida.'};
+  if(o.cost && s.cash < o.cost) return {ok:false, err:'Caixa insuficiente para esta opção. Escolha outra.'};
+  const before=s.cash;
+  if(p.id==='ac'){ if(optId==='fix') post(s,'evento','Conserto do ar-condicionado',-2500); else s.acBroken=true; }
+  if(p.id==='offer'){ const b=s.barbers.find(x=>x.id===p.barber);
+    if(optId==='raise' && b) b.bonus+=.03;
+    if(optId==='bonus') post(s,'evento','Bônus de retenção do profissional',-3000);
+    if(optId==='let'){ s.barbers=s.barbers.filter(x=>x.id!==p.barber); s.reputation-=2; } }
+  s.notes.push(`M${s.month}: ${p.title} → ${o.label}`);
+  s.pending=null; return {ok:true, before, after:s.cash, cost:o.cost};
+}
+
+/* ---------- AÇÕES MENSAIS ---------- */
+const ACTIONS = [
+  {id:'hire', name:'Contratar profissional', cost:()=>0,
+    effect:'Ocupa um posto livre. Paga comissão sobre o que produzir, com piso mensal garantido.', duration:'Permanente', cooldown:'—',
+    options:s=>LEVELS.map((L,i)=>({v:i,label:`${L.name} · ${Math.round(L.rate*100)}% · piso ${L.floor}`,
+      ok: i<2 || (s.month>6 && s.reputation>=70), why: i===2?'Expert exige mês 7+ e reputação ≥ 70':''})),
+    cond:s=> s.barbers.length<operational(s) ? '' : 'Não há posto operacional livre',
+    run:(s,v)=>{ if(v===2 && !(s.month>6&&s.reputation>=70)) return 'Expert exige mês 7+ e reputação ≥ 70.'; addBarber(s,v); }},
+  {id:'fire', name:'Desligar profissional', cost:s=>{ const b=[...s.barbers].sort((a,b)=>a.level-b.level)[0]; return b?LEVELS[b.level].floor:0; },
+    effect:'Reduz custo fixo de pessoal. Rescisão = 1 piso mensal. −2 de reputação.', duration:'Permanente', cooldown:'1 mês',
+    cond:s=> s.barbers.length>1 ? '' : 'Precisa manter ao menos um profissional', cd:1,
+    run:s=>{ const b=[...s.barbers].sort((a,b)=>a.level-b.level)[0]; s.barbers=s.barbers.filter(x=>x!==b); s.reputation-=2; return {desc:`Rescisão de ${LEVELS[b.level].name.toLowerCase()}`}; }},
+  {id:'train', name:'Treinamento', cost:()=>2500,
+    effect:'Sobe um nível o profissional menos experiente (para expert, exige reputação ≥ 70). Aumenta produção e comissão.', duration:'Permanente', cooldown:'6 meses',
+    cond:s=> s.month<6 ? 'Disponível a partir do mês 6' : (s.barbers.some(b=>b.level===0||(b.level===1&&s.reputation>=70))?'':'Nenhum profissional apto a subir de nível'), cd:6,
+    run:s=>{ const b=[...s.barbers].filter(b=>b.level===0||(b.level===1&&s.reputation>=70)).sort((a,b)=>a.level-b.level)[0]; b.level++; }},
+  {id:'mkt_local', name:'Divulgação local', cost:()=>800, effect:'+6% de procura (não cria capacidade).', duration:'2 meses', cooldown:'2 meses', cd:2,
+    cond:()=>'', run:s=>{ s.boosts.push({from:s.month,to:s.month+1,pct:.06,src:'local'}); }},
+  {id:'mkt_paid', name:'Tráfego pago', cost:()=>2000, effect:'+12% de procura (limite total de marketing: +30%).', duration:'3 meses', cooldown:'3 meses', cd:3,
+    cond:()=>'', run:s=>{ s.boosts.push({from:s.month,to:s.month+2,pct:.12,src:'pago'}); }},
+  {id:'referral', name:'Campanha de indicação', cost:()=>400, effect:'Brinde para quem indica: +5% de procura.', duration:'3 meses', cooldown:'3 meses', cd:3,
+    cond:()=>'', run:s=>{ s.boosts.push({from:s.month,to:s.month+2,pct:.05,src:'indicação'}); }},
+  {id:'agenda', name:'Reorganizar agenda', cost:()=>0, effect:'Menos horários ociosos: +4% de capacidade. Não cria clientes.', duration:'3 meses', cooldown:'6 meses', cd:6,
+    cond:()=>'', run:s=>{ s.capBoosts.push({from:s.month,to:s.month+2,pct:.04}); }},
+  {id:'talk', name:'Conversa individual com a equipe', cost:()=>0, effect:'Reduz risco de saída de profissionais.', duration:'6 meses', cooldown:'6 meses', cd:6,
+    cond:()=>'', run:s=>{ s.retentionUntil=s.month+6; }},
+  {id:'waste', name:'Revisar compras e desperdício', cost:()=>0, effect:'−R$ 0,50 de custo por corte.', duration:'Permanente (máx. 2 vezes)', cooldown:'6 meses', cd:6,
+    cond:s=> s.wasteCuts>=2 ? 'Já aplicado 2 vezes' : '', run:s=>{ s.wasteCuts++; }},
+  {id:'mentor', name:'Mentoria de gestão', cost:()=>8000, effect:'+10% de procura e +10% de capacidade. Só rende se houver clientes e cadeira para atender.', duration:'12 meses', cooldown:'Só nos meses 9 e 21',
+    cond:s=> [9,21].includes(s.month) ? (s.month<=s.mentorUntil?'Mentoria ainda ativa':'') : 'Disponível apenas nos meses 9 e 21',
+    run:s=>{ s.mentorUntil=s.month+11; }},
+  {id:'maint', name:'Manutenção preventiva', cost:()=>2500, effect:'Evita desgaste (sem ela por 12 meses: −3% de capacidade) e dá +1 de reputação.', duration:'12 meses', cooldown:'6 meses', cd:6,
+    cond:s=> s.month<6 ? 'Disponível a partir do mês 6':'', run:s=>{ s.lastMaint=s.month; s.reputation+=1; }},
+  {id:'ac_fix', name:'Consertar ar-condicionado', cost:()=>3000, effect:'Recupera a capacidade perdida.', duration:'Permanente', cooldown:'—',
+    cond:s=> s.acBroken?'':'hidden', run:s=>{ s.acBroken=false; }},
+  {id:'facade', name:'Aprimorar fachada', cost:s=>CATALOG.facade[Math.min(3,(s.tiers.facade??0)+1)].unit,
+    effect:'Troca para a fachada do nível seguinte: +2% de procura e +3 de reputação.', duration:'Permanente', cooldown:'6 meses', cd:6,
+    cond:s=> (s.tiers.facade??0)>=3 ? 'Fachada já está no nível máximo' : '', run:s=>{ s.tiers.facade++; s.reputation+=3; return {desc:`Nova fachada: ${CATALOG.facade[s.tiers.facade].name}`}; }},
+  {id:'station', name:'Comprar posto completo', cost:s=>stationUnit(s), effect:'Cadeira + bancada + espelho no padrão escolhido. Precisa de profissional para faturar.', duration:'Permanente', cooldown:'1 mês', cd:1,
+    cond:()=>'', run:s=>{ s.qty++; }},
+  {id:'rebuild', name:'Reconstruir posto danificado', cost:s=>{ const d=s.damaged[0]; return d? ['chair','bench','mirror'].filter(k=>d[k]).reduce((a,k)=>a+CATALOG[k][s.tiers[k]].unit,0):0; },
+    effect:'Repõe os itens danificados de um posto, pelo custo real de cada item.', duration:'Permanente', cooldown:'—',
+    cond:s=> s.damaged.length?'':'hidden', run:s=>{ s.damaged.shift(); }},
+  {id:'rent', name:'Renegociar aluguel', cost:()=>0, effect:'Tentativa de redução de 4% a 6%. Pode não dar certo; chance maior com reputação ≥ 60.', duration:'Permanente', cooldown:'12 meses', cd:12,
+    cond:s=> s.month<12 ? 'Disponível a partir do mês 12':'', run:s=>{ const good=s.reputation>=60; if(rnd(s)<(good?.7:.4)){ const f=good?.94:.96; s.rentFactor*=f; return {desc:`Renegociação aceita: aluguel −${Math.round((1-f)*100)}%`}; } return {desc:'Proprietário recusou a renegociação'}; }},
+  {id:'insurance', name:'Seguro anual', cost:(s,v)=> v==='full'?6000:3000,
+    effect:'Básico: cobre 50% dos itens, franquia R$ 2.000. Completo: cobre 100%, franquia R$ 1.000.', duration:'12 meses', cooldown:'—',
+    options:()=>[{v:'basic',label:'Básico · 3.000',ok:true},{v:'full',label:'Completo · 6.000',ok:true}],
+    cond:s=> s.month<12 ? 'Disponível a partir do mês 12' : (s.insurance&&s.month<=s.insurance.until?`Seguro ativo até o mês ${s.insurance.until}`:''),
+    run:(s,v)=>{ s.insurance={plan:v, until:s.month+11}; return {desc:`Seguro ${v==='full'?'completo':'básico'} até o mês ${s.month+11}`}; }},
+  {id:'loyalty', name:'Programa de fidelidade', cost:()=>1500, effect:'+4% de procura e metade da perda quando surgir concorrente.', duration:'Permanente', cooldown:'Uma vez',
+    cond:s=> s.month<4 ? 'Disponível a partir do mês 4' : (s.loyalty?'Já implantado':''), run:s=>{ s.loyalty=true; }},
+  {id:'price', name:'Revisar preço do corte', cost:()=>0, effect:'Muda procura, velocidade de atendimento e expectativa de estrutura. Subir 2+ faixas de uma vez: −3 de reputação.', duration:'Permanente', cooldown:'6 meses', cd:6,
+    options:s=>PRICES.map(v=>({v, label:`Corte a ${v}`, ok:v!==s.price})),
+    cond:()=>'', run:(s,v)=>{ const up=PRICES.indexOf(v)-PRICES.indexOf(s.price); if(up>=2) s.reputation-=3; const old=s.price; s.price=v; return {desc:`Preço de ${old} para ${v}`}; }},
+];
+function actionState(s,a,v){
+  let why = a.cond(s);
+  if(why==='hidden') return null;
+  const cost = a.cost(s,v);
+  if(!why && a.cd && s.lastUsed[a.id]!==undefined && s.month-s.lastUsed[a.id] < a.cd) why=`Disponível de novo no mês ${s.lastUsed[a.id]+a.cd}`;
+  if(!why && s.acts.includes(a.id) && a.id!=='hire' && a.id!=='rebuild') why='Já feito neste mês';
+  if(!why && s.acts.length>=MAX_ACTIONS) why='Limite de 5 ações neste mês';
+  if(!why && s.pending) why='Resolva o acontecimento do mês primeiro';
+  const afford = cost<=s.cash;
+  return {a, cost, why, afford, ok: !why && afford};
+}
+function actionsFor(s){ return ACTIONS.map(a=>actionState(s,a,a.id==='insurance'?'basic':undefined)).filter(Boolean); }
+function doAction(s,id,v){
+  if(s.phase!=='month') return {ok:false, err:'Fora da operação.'};
+  const a=ACTIONS.find(x=>x.id===id); if(!a) return {ok:false, err:'Ação inexistente.'};
+  const st=actionState(s,a,v); if(!st) return {ok:false, err:'Ação indisponível.'};
+  if(st.why) return {ok:false, err:st.why};
+  if(a.options){ const o=a.options(s).find(x=>x.v===v); if(!o) return {ok:false, err:'Escolha uma opção.'}; if(o.ok===false) return {ok:false, err:o.why||'Opção indisponível.'}; }
+  if(!st.afford) return {ok:false, err:`Caixa insuficiente: esta ação custa ${st.cost} e o saldo é ${s.cash}. Investimentos não são financiados.`};
+  const before=s.cash;
+  const r = a.run(s,v); if(typeof r==='string') return {ok:false, err:r};
+  const desc = (r&&r.desc) || a.name + (a.options&&a.id==='hire' ? ` — ${LEVELS[v].name.toLowerCase()}` : '');
+  if(st.cost) post(s,'acao',desc,-st.cost);
+  s.acts.push(id); s.lastUsed[id]=s.month; s.notes.push(`M${s.month}: ${desc}`);
+  return {ok:true, before, cost:st.cost, after:s.cash, desc};
+}
+
+/* ---------- FECHAMENTO ---------- */
+function closeMonth(s){
+  if(s.phase!=='month') return {ok:false, err:'Fora da operação.'};
+  if(s.pending) return {ok:false, err:'Resolva o acontecimento antes de fechar o mês.'};
+  const m=s.month, p=pt(s);
+  const noise = .96 + rnd(s)*.08;
+  const f = forecast(s,m,noise);
+  const cuts = Math.max(0, Math.floor(Math.min(f.demand, f.capacity)));
+  const revenue = cuts*s.price;
+  const pay = payroll(s, f.caps, revenue, f.capacity);
+  const variable = R(cuts*(VAR_COST-.5*s.wasteCuts));
+  const rent = R(p.rent*s.rentFactor), fixed=p.fixed, recep=CATALOG.reception[s.tiers.reception].monthly;
+  const start = s.ledger.length, cashStart = s.history.length ? s.history[s.history.length-1].cash : null;
+  post(s,'operacao',`Receita de ${cuts} cortes × ${s.price}`, revenue);
+  post(s,'operacao','Comissões e pisos da equipe', -pay.total);
+  post(s,'operacao','Custo variável por corte', -variable);
+  post(s,'operacao','Aluguel', -rent);
+  post(s,'operacao','Custos fixos (energia, água, internet, produtos de limpeza, café)', -fixed);
+  if(recep) post(s,'operacao','Salário da recepção', -recep);
+  const operating = revenue - pay.total - variable - rent - fixed - recep;
+  let interest=0; if(s.cash<0){ interest=R(-s.cash*OVERDRAFT); post(s,'juros','Juros do cheque especial (3% a.m. sobre saldo negativo)',-interest); }
+  const monthEntries = s.ledger.filter(e=>e.m===m);
+  const extra = monthEntries.filter(e=>e.cat==='acao'||e.cat==='evento').reduce((a,e)=>a+e.amount,0);
+  const flow = monthEntries.reduce((a,e)=>a+e.amount,0);
+  // reputação
+  let d = .3 + (f.Q-f.expQ)*1.2 + (f.fit>=.9?.3:f.fit<.6?-.5:0) + (cuts < f.demand*.8 ? -.4 : 0)
+        - (s.acBroken?1:0) - (s.damaged.length?1:0) - (m-s.lastMaint>12&&m>12?.5:0);
+  if(d>0) d*= Math.max(0,(100-s.reputation)/60);
+  s.reputation = Math.max(5, Math.min(100, s.reputation+d));
+  const row = {m, demand:R(f.demand), capacity:R(f.capacity), cuts, price:s.price, revenue, payroll:pay.total, variable, rent, fixed, recep,
+    operating, extra, interest, flow, cash:s.cash, reputation:Math.round(s.reputation*10)/10, barbers:s.barbers.length, stations:operational(s), qty:s.qty};
+  s.history.push(row);
+  let report=null;
+  if(m%3===0){ report = quarterReport(s); s.reports.push(report); }
+  if(m>=LAST_MONTH){ s.phase='end'; }
+  else { s.month++; startMonth(s); }
+  return {ok:true, row, report};
+}
+function quarterReport(s){
+  const h=s.history.slice(-3), q=s.history.length/3;
+  const sum=k=>h.reduce((a,x)=>a+x[k],0);
+  const demand=sum('demand'), cap=sum('capacity'), cuts=sum('cuts');
+  const attention=[];
+  if(cap < demand*.9) attention.push(`Faltou capacidade: ${demand-cuts} clientes procuraram e não foram atendidos. Mais profissionais, postos ou produtividade podem ajudar.`);
+  if(demand < cap*.8) attention.push(`Sobrou capacidade: ${Math.max(0,cap-cuts)} atendimentos possíveis ficaram vazios. Procura (preço, marketing, reputação) é o gargalo.`);
+  if(sum('operating')<0) attention.push('O resultado operacional do trimestre foi negativo: as receitas não cobriram os custos do mês.');
+  if(h[h.length-1].cash<0) attention.push('O caixa está negativo e pagando juros de cheque especial.');
+  const fits = pt(s).fit[s.price]; if(fits<.7) attention.push(`O preço de ${s.price} tem baixa aderência ao público deste ponto.`);
+  if(!attention.length) attention.push('Procura e capacidade estão equilibradas e o resultado é positivo. O desafio é sustentar isso com os próximos eventos.');
+  const next = {1:'Mês 6: equipamentos começam a exigir manutenção.',2:'Mês 9: mentoria disponível; mês 12: seguro.',3:'Mês 12 em diante: risco patrimonial e seguro.',4:'Mês 18: risco de saída de profissional.',5:'Mês 18: equipe pode mudar.',6:'Mês 21: oportunidade de expansão e mentoria.',7:'Mês 24: estrutura envelhecendo.',8:'Mês 27: concorrente na região.',9:'Mês 30: reajuste do aluguel.',10:'Mês 33: proposta ao seu melhor profissional.',11:'Mês 36: encerramento.',12:'Fim do jogo.'}[q];
+  return {q, months:h.map(x=>x.m), revenue:sum('revenue'), operating:sum('operating'), flow:sum('flow'), demand, capacity:cap, cuts,
+    cash:h[h.length-1].cash, reputation:h[h.length-1].reputation, attention, next};
+}
+function finalSummary(s){
+  const H=s.history, sum=(a,k)=>a.reduce((t,x)=>t+x[k],0);
+  const years=[0,1,2].map(i=>{ const a=H.slice(i*12,i*12+12); return {y:i+1, revenue:sum(a,'revenue'), operating:sum(a,'operating'), flow:sum(a,'flow'), cuts:sum(a,'cuts'), cash:a.length?a[a.length-1].cash:null}; });
+  return {cash:s.cash, revenue:sum(H,'revenue'), operating:sum(H,'operating'), cuts:sum(H,'cuts'), invested:s.invested,
+    debt: s.cash<0 ? -s.cash : 0, interest:sum(H,'interest'), reputation:Math.round(s.reputation), years,
+    unserved: H.reduce((t,x)=>t+Math.max(0,x.demand-x.cuts),0), idle: H.reduce((t,x)=>t+Math.max(0,x.capacity-x.cuts),0),
+    negMonths: H.filter(x=>x.cash<0).length, notes:s.notes };
+}
+
+return { SCHEMA, START_CASH, MAX_ACTIONS, POINTS, CATALOG, OPEN_MKT, PRICES, LEVELS, STEPS, ACTIONS,
+  newGame, setupOptions, setupConfirm, maxQty, minRest, stationUnit, minStation, forecast, commitments, quality,
+  actionsFor, actionState, doAction, resolvePending, closeMonth, finalSummary, reconcile, operational };
+})();
+if (typeof module !== 'undefined') module.exports = G;
+</script>
+<script>/* ===== INTERFACE ===== */
+(() => {
+'use strict';
+const KEY = 'dzaf_partida';
+const $ = sel => document.querySelector(sel);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money = x => { const v = Math.round(x); const s = Math.abs(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}); return v<0 ? '−'+s : s; };
+const M = x => `<span class="num ${x<0?'neg':''}">${money(x)}</span>`;
+let S = null, ui = { sel:null, qty:null, team:{ini:1,inter:0}, opt:{}, result:null, view:'intro' };
+
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify({schema:G.SCHEMA, S, view:ui.view, result:ui.result})); }catch(e){} }
+function load(){ try{ const d=JSON.parse(localStorage.getItem(KEY)||'null'); if(d && d.schema===G.SCHEMA && d.S && G.reconcile(d.S)===0) return d; }catch(e){} return null; }
+
+/* ---------- fotos: arquivos locais reais; se faltar, aviso em texto (nunca arte inventada) ---------- */
+window.noPhoto = img => {
+  const base = img.dataset.base;
+  if(!img.dataset.t){ img.dataset.t='1'; img.src = `assets/${base}.webp`; return; }
+  const div = document.createElement('div'); div.className='nophoto';
+  div.innerHTML = `<span>Foto não incluída</span><code>assets/${esc(base)}.jpg</code>`;
+  img.replaceWith(div);
+};
+const photo = (base, alt) => `<div class="photo"><img loading="lazy" data-base="${esc(base)}" src="assets/${esc(base)}.jpg" alt="${esc(alt)}" onerror="noPhoto(this)"></div>`;
+
+/* ---------- barra de caixa (sempre visível) ---------- */
+function bar(){
+  const invested = S ? -S.ledger.filter(e=>e.cat==='abertura').reduce((a,e)=>a+e.amount,0) : 0;
+  const month = !S ? 'Não iniciado' : S.phase==='setup' ? 'Montagem' : (ui.view==='result' && ui.result) ? `Fechamento do mês ${ui.result.row.m}` : S.phase==='end' ? 'Encerrado' : `Mês ${S.month} de 36`;
+  $('#bar').innerHTML = `
+    <div class="cash"><span class="lbl">Saldo em caixa</span><b id="cashv" class="${S&&S.cash<0?'neg':''}">${money(S?S.cash:G.START_CASH)}</b></div>
+    <div class="kv"><span class="lbl">Investido na abertura</span>${M(invested)}</div>
+    <div class="kv"><span class="lbl">Compromissos por mês</span>${M(S?G.commitments(S):0)}</div>
+    <div class="kv"><span class="lbl">Período</span><span class="num">${month}</span></div>
+    ${S?`<button class="ghost small" onclick="UI.sheet()">Extrato</button>`:''}`;
+}
+function toast(r){
+  if(!r || !r.cost) return;
+  const t=$('#toast');
+  t.innerHTML = `<span>${esc(r.label||r.desc||'')}</span><b class="num">${money(r.before)} − ${money(r.cost)} = ${money(r.after)}</b>`;
+  t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+  const c=$('#cashv'); if(c){ c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); }
+}
+function err(msg){ const t=$('#toast'); t.innerHTML=`<span class="neg">${esc(msg)}</span>`; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show'); }
+
+/* ---------- telas ---------- */
+function render(){
+  bar();
+  const v = ui.view;
+  let h='';
+  if(v==='intro') h=intro();
+  else if(v==='result') h=resultView();
+  else if(S.phase==='setup') h=setupView();
+  else if(S.phase==='month') h=monthView();
+  else h=endView();
+  $('#app').innerHTML=h;
+  dock();
+  save();
+}
+function intro(){
+  const saved = load();
+  return `<section class="hero">
+    <p class="brand">O Barbeiro da Cidade</p>
+    <h1>Do zero ao futuro</h1>
+    <p class="sub">Sua barbearia. Suas escolhas. Seu resultado.</p>
+    <div class="how">
+      <p><b>Você tem R$ 100.000.</b> Primeiro monta a barbearia: imóvel, postos, móveis, equipe, preço e divulgação. Cada compra sai do caixa na hora em que você confirma.</p>
+      <p><b>Depois opera 36 meses.</b> A cada mês, até 5 decisões. Acontecimentos inesperados podem aparecer. O fechamento mostra procura, capacidade, faturamento, custos e caixa.</p>
+      <p><b>Não existe falência antecipada.</b> Despesas obrigatórias podem deixar o caixa negativo, com juros. Investimentos, só com dinheiro disponível.</p>
+    </div>
+    <div class="row">
+      <button class="primary" onclick="UI.start()">Começar nova partida</button>
+      ${saved?`<button class="ghost" onclick="UI.resume()">Continuar partida salva (${saved.S.phase==='setup'?'montagem':saved.S.phase==='end'?'encerrada':'mês '+saved.S.month})</button>`:''}
+    </div>
+    <p class="fine">Simulação educacional: preços, demanda e eventos são parâmetros didáticos, não projeções comerciais. A partida fica salva só neste aparelho.</p>
+  </section>`;
+}
+
+function stepper(){
+  return `<ol class="steps" aria-label="Etapas da montagem">${G.STEPS.map((st,i)=>`<li class="${i<S.step?'done':i===S.step?'now':''}" ${i===S.step?'aria-current="step"':''}>${esc(st.title)}</li>`).join('')}</ol>`;
+}
+function setupView(){
+  const st=G.STEPS[S.step];
+  let h = stepper() + `<header class="stephead"><p class="count">Etapa ${S.step+1} de ${G.STEPS.length}</p><h2>${esc(st.title)}</h2></header>`;
+  const opts = G.setupOptions(S);
+  if(st.id==='point'){
+    h+=`<p class="lead">O custo de entrada é a caução (3 aluguéis) mais a reforma. O aluguel mensal só começa a ser pago a partir do mês 1.</p>`;
+    h+=`<div class="grid">${opts.map(o=>{ const p=G.POINTS[o.i]; return optionCard(o, `
+      <dl class="facts"><dt>Aluguel mensal</dt><dd>${M(p.rent)}</dd><dt>Caução (3×)</dt><dd>${M(p.rent*3)}</dd><dt>Reforma</dt><dd>${M(p.reform)}</dd>
+      <dt>Outros fixos/mês</dt><dd>${M(p.fixed)}</dd><dt>Procura potencial</dt><dd class="num">${p.demand} cortes/mês</dd></dl>`); }).join('')}</div>`;
+  } else if(st.id==='qty'){
+    const max=G.maxQty(S); const n = ui.qty ?? Math.min(max, 4);
+    const tiers=[0,1,2,3].map(t=>['chair','bench','mirror'].reduce((a,k)=>a+G.CATALOG[k][t].unit,0));
+    h+=`<p class="lead">Cada posto precisa de cadeira, bancada e espelho. Você escolhe os modelos nas próximas telas e paga por posto. Nada é cobrado nesta etapa.</p>
+      <div class="qty">
+        <button class="ghost big" aria-label="Menos um posto" onclick="UI.qty(-1)">−</button>
+        <label><span class="sr">Quantidade de postos</span><input id="qty" type="number" min="1" max="${max}" value="${n}" inputmode="numeric" oninput="UI.qtySet(this.value)"></label>
+        <button class="ghost big" aria-label="Mais um posto" onclick="UI.qty(1)">+</button>
+      </div>
+      <p class="muted center">Com seu caixa cabem até <b>${max}</b> postos no padrão mais simples (reservando o mínimo das próximas etapas).</p>
+      <table class="tbl"><thead><tr><th>Padrão do posto</th><th>Por posto</th><th>${n} postos</th></tr></thead><tbody>
+      ${['Básico','Intermediário','Superior','Luxo'].map((nm,i)=>`<tr><td>${nm}</td><td>${M(tiers[i])}</td><td>${M(tiers[i]*n)}</td></tr>`).join('')}</tbody></table>
+      <p class="fine">Estimativa para planejar; o valor real é cobrado item a item nas telas de cadeira, bancada e espelho.</p>`;
+  } else if(G.CATALOG[st.id]){
+    const per = st.perStation;
+    h+=`<p class="lead">${per?`Preço por posto × ${S.qty} postos.`:'Compra única, não multiplica pelos postos.'}${st.id==='reception'?' Recepcionista é pessoa: tem salário mensal, separado do móvel.':''}</p>`;
+    h+=`<div class="grid">${opts.map(o=>optionCard(o, `<p class="price">${per?`${S.qty} × ${money(o.unit)} = `:''}${M(o.total)}</p>${o.monthly?`<p class="warn">+ ${money(o.monthly)} por mês</p>`:''}`)).join('')}</div>`;
+  } else if(st.id==='team'){
+    const t=ui.team, total=t.ini+t.inter, L=G.LEVELS;
+    const cap = t.ini*L[0].prod + t.inter*L[1].prod, floors=t.ini*L[0].floor+t.inter*L[1].floor;
+    h+=`<p class="lead">Contrate iniciantes e no máximo um intermediário. Expert só depois do mês 6 com reputação 70 ou mais. Não há taxa de contratação: cada profissional recebe comissão sobre o que produz, com piso mensal garantido.</p>
+      <div class="team">
+        ${[['ini',0,'Iniciante',S.qty],['inter',1,'Intermediário',1]].map(([k,l,nm,mx])=>`
+        <div class="teamrow"><div><b>${nm}</b><p class="muted">${L[l].prod} cortes/mês (em preço médio) · comissão ${Math.round(L[l].rate*100)}% · piso ${money(L[l].floor)}</p></div>
+        <div class="stepperbtn"><button class="ghost" aria-label="Remover ${nm}" onclick="UI.team('${k}',-1)" ${t[k]<=0?'disabled':''}>−</button><span class="num">${t[k]}</span>
+        <button class="ghost" aria-label="Adicionar ${nm}" onclick="UI.team('${k}',1)" ${t[k]>=mx||total>=S.qty?'disabled':''}>+</button></div></div>`).join('')}
+      </div>
+      <dl class="facts wide"><dt>Profissionais / postos</dt><dd class="num">${total} / ${S.qty}</dd><dt>Capacidade aproximada</dt><dd class="num">${cap} cortes/mês</dd><dt>Pisos mensais garantidos</dt><dd>${M(floors)}</dd></dl>
+      ${total<S.qty?`<p class="muted">${S.qty-total} posto(s) ficarão vazios. É permitido, mas posto vazio não fatura.</p>`:''}`;
+  } else if(st.id==='price'){
+    const Q=G.quality(S);
+    h+=`<p class="lead">O preço muda quem procura sua barbearia, a velocidade de atendimento e o nível de estrutura que o cliente espera. Poderá ser revisto depois só com uma ação específica.</p>
+      <div class="grid four">${opts.map(o=>{ const fit=o.fit, lvl=fit>=.95?'Alta':fit>=.75?'Média':'Baixa';
+        return optionCard({...o, name:`Corte a ${money(o.value)}`}, `<dl class="facts"><dt>Aderência ao público</dt><dd>${lvl}</dd><dt>Estrutura esperada</dt><dd>${Q>=o.expQ?'Atende':'Abaixo do esperado'}</dd><dt>Velocidade</dt><dd>${{20:'Muito rápido',45:'Rápido',75:'Padrão',100:'Detalhado'}[o.value]}</dd></dl>`); }).join('')}</div>`;
+  } else if(st.id==='marketing'){
+    h+=`<p class="lead">Pago agora, uma única vez. Marketing traz procura, mas não cria cadeira nem profissional para atender.</p>`;
+    h+=`<div class="grid four">${opts.map(o=>optionCard(o, `<p class="price">${M(o.total)}</p>`)).join('')}</div>`;
+  } else if(st.id==='review'){
+    const open=S.ledger.filter(e=>e.cat==='abertura');
+    const p=G.POINTS[S.point], rec=G.CATALOG.reception[S.tiers.reception];
+    h+=`<div class="cols"><div><h3>Investimentos da abertura</h3><table class="tbl"><tbody>${open.map(e=>`<tr><td>${esc(e.desc)}</td><td>${M(e.amount)}</td></tr>`).join('')}
+      <tr class="sum"><td>Total investido</td><td>${M(open.reduce((a,e)=>a+e.amount,0))}</td></tr>
+      <tr class="sum"><td>Capital de giro (saldo)</td><td>${M(S.cash)}</td></tr></tbody></table>
+      <p class="ok">${G.reconcile(S)===0?'Extrato conferido: 100.000 − investimentos = saldo atual.':'Divergência no extrato.'}</p></div>
+      <div><h3>Sua barbearia</h3><dl class="facts wide"><dt>Ponto</dt><dd>${esc(p.name)}</dd><dt>Postos completos</dt><dd class="num">${S.qty}</dd>
+      <dt>Equipe</dt><dd>${S.barbers.map(b=>G.LEVELS[b.level].name).join(', ')}</dd><dt>Preço do corte</dt><dd>${M(S.price)}</dd>
+      <dt>Marketing</dt><dd>${esc(G.OPEN_MKT[S.marketing].name)}</dd></dl>
+      <h3>Despesas mensais previstas</h3><table class="tbl"><tbody><tr><td>Aluguel</td><td>${M(p.rent)}</td></tr><tr><td>Outros fixos</td><td>${M(p.fixed)}</td></tr>
+      ${rec.monthly?`<tr><td>Recepção (salários)</td><td>${M(rec.monthly)}</td></tr>`:''}<tr><td>Pisos da equipe (mínimo)</td><td>${M(S.barbers.reduce((a,b)=>a+G.LEVELS[b.level].floor,0))}</td></tr>
+      <tr class="sum"><td>Compromisso mínimo por mês</td><td>${M(G.commitments(S))}</td></tr></tbody></table>
+      <p class="muted">Comissões acima do piso e R$ 3 por corte de custo variável dependem do movimento.</p></div></div>`;
+  }
+  return h;
+}
+function optionCard(o, extra){
+  const sel = ui.sel===o.i;
+  return `<button class="opt ${sel?'sel':''}" ${o.ok?'':'disabled'} aria-pressed="${sel}" onclick="UI.pick(${o.i})">
+    ${o.img?photo(o.img,o.name):''}
+    <span class="optbody"><span class="optname">${esc(o.name)}</span>${o.desc?`<span class="optdesc">${esc(o.desc)}</span>`:''}${extra||''}
+    ${o.ok?'':`<span class="blocked">${esc(o.reason||'Caixa insuficiente')}</span>`}</span></button>`;
+}
+
+/* dock inferior: saldo projetado + confirmar */
+function dock(){
+  const d=$('#dock'); let h='';
+  if(ui.view==='game' && S.phase==='setup'){
+    const st=G.STEPS[S.step]; let cost=0, label='', can=false;
+    if(st.id==='qty'){ const n=ui.qty ?? Math.min(G.maxQty(S),4); can=n>=1&&n<=G.maxQty(S); label=`${n} postos (sem cobrança agora)`; }
+    else if(st.id==='team'){ const n=ui.team.ini+ui.team.inter; can=n>=1&&n<=S.qty; label=`${n} profissional(is) — sem taxa de contratação`; }
+    else if(st.id==='review'){ can=true; label='Tudo pronto'; }
+    else if(ui.sel!==null){ const o=G.setupOptions(S)[ui.sel]; if(o){ cost=o.total; label=o.name; can=o.ok; } }
+    else label='Escolha uma opção';
+    h=`<div class="proj"><span class="muted">${esc(label)}</span>
+      <b class="num">${money(S.cash)} − ${money(cost)} = <span class="${S.cash-cost<0?'neg':'pos'}">${money(S.cash-cost)}</span></b></div>
+      <button class="primary" ${can?'':'disabled'} onclick="UI.confirm()">${st.id==='review'?'Inaugurar a barbearia':'Confirmar e pagar'}</button>
+      <p class="fine">Decisão definitiva. Selecionar não cobra; o débito acontece ao confirmar.</p>`;
+  } else if(ui.view==='game' && S.phase==='month'){
+    h=`<div class="proj"><span class="muted">Ações: ${S.acts.length}/5</span><b class="num">Mês ${S.month} de 36</b></div>
+      <button class="primary" ${S.pending?'disabled':''} onclick="UI.close()">${S.pending?'Resolva o acontecimento':`Fechar o mês ${S.month}`}</button>`;
+  }
+  d.innerHTML=h; d.hidden=!h; document.body.classList.toggle('hasdock',!!h);
+}
+
+function monthView(){
+  const f=G.forecast(S,S.month), est=Math.floor(Math.min(f.demand,f.capacity));
+  const last=S.history[S.history.length-1];
+  const acts=G.actionsFor(S);
+  let h=`<div class="timeline" aria-hidden="true">${Array.from({length:36},(_,i)=>`<i class="${i+1<S.month?'past':i+1===S.month?'now':''} ${(i+1)%3===0?'q':''}"></i>`).join('')}</div>
+    <header class="stephead"><p class="count">${S.month<=12?'Ano 1':S.month<=24?'Ano 2':'Ano 3'}</p><h2>Mês ${S.month} de 36</h2></header>`;
+  if(S.events.length) h+=S.events.map(e=>`<article class="event ${e.kind}"><h3>${esc(e.t)}</h3><p>${esc(e.txt)}</p></article>`).join('');
+  if(S.pending) h+=`<article class="event decide"><h3>Decida: ${esc(S.pending.title)}</h3><div class="grid">${S.pending.options.map(o=>`
+    <button class="opt small" ${o.cost&&S.cash<o.cost?'disabled':''} onclick="UI.resolve('${o.id}')"><span class="optbody"><span class="optname">${esc(o.label)}</span><span class="optdesc">${esc(o.desc)}</span>
+    <span class="price">${o.cost?M(-o.cost):'Sem custo agora'}</span>${o.cost&&S.cash<o.cost?'<span class="blocked">Caixa insuficiente</span>':''}</span></button>`).join('')}</div></article>`;
+  h+=`<div class="cols">
+    <section><h3>Decisões do mês <span class="muted">(${S.acts.length} de 5 usadas)</span></h3>
+      ${S.acts.length>=5?'<p class="warn">Limite de 5 decisões atingido. Feche o mês.</p>':''}
+      <div class="acts">${acts.filter(x=>!x.why).map(actCard).join('')||'<p class="muted">Nenhuma decisão disponível agora.</p>'}</div>
+      ${acts.some(x=>x.why)?`<details class="later"><summary>Indisponíveis neste mês (${acts.filter(x=>x.why).length})</summary><div class="acts">${acts.filter(x=>x.why).map(actCard).join('')}</div></details>`:''}</section>
+    <aside>
+      <h3>Previsão deste mês</h3>
+      <dl class="facts wide"><dt>Procura estimada</dt><dd class="num">${Math.round(f.demand)} clientes</dd><dt>Capacidade</dt><dd class="num">${Math.round(f.capacity)} cortes</dd>
+      <dt>Gargalo</dt><dd>${f.demand>f.capacity?'Capacidade (falta cadeira ou profissional)':'Procura (falta cliente)'}</dd>
+      <dt>Faturamento provável</dt><dd>${M(est*S.price)}</dd><dt>Compromissos fixos</dt><dd>${M(G.commitments(S))}</dd></dl>
+      <p class="fine">Estimativa sem a variação natural do mês (±4%).</p>
+      <h3>Equipe e postos</h3>
+      <dl class="facts wide"><dt>Postos operando</dt><dd class="num">${G.operational(S)} de ${S.qty}</dd><dt>Profissionais</dt><dd>${S.barbers.map(b=>G.LEVELS[b.level].name+(b.bonus?' (+3 p.p.)':'')).join(', ')||'Nenhum'}</dd>
+      <dt>Preço</dt><dd>${M(S.price)}</dd><dt>Reputação</dt><dd class="num">${Math.round(S.reputation)}/100</dd>
+      <dt>Seguro</dt><dd>${S.insurance&&S.month<=S.insurance.until?`${S.insurance.plan==='full'?'Completo':'Básico'} até mês ${S.insurance.until}`:'Sem cobertura'}</dd></dl>
+      ${last?`<h3>Último fechamento (mês ${last.m})</h3><dl class="facts wide"><dt>Atendimentos</dt><dd class="num">${last.cuts}</dd><dt>Faturamento</dt><dd>${M(last.revenue)}</dd><dt>Resultado operacional</dt><dd>${M(last.operating)}</dd><dt>Fluxo de caixa</dt><dd>${M(last.flow)}</dd></dl>`:''}
+    </aside></div>`;
+  return h;
+}
+function actCard(st){
+  const a=st.a, opts=a.options?a.options(S):null;
+  const chosen = ui.opt[a.id] ?? (opts ? (opts.find(o=>o.ok!==false)||{}).v : undefined);
+  const cost = a.cost(S, chosen);
+  const blocked = st.why || (cost>S.cash ? 'Caixa insuficiente' : '');
+  return `<article class="act ${blocked?'off':''}">
+    <div class="acthead"><h4>${esc(a.name)}</h4><span class="price">${cost?M(-cost):'Sem custo'}</span></div>
+    <p>${esc(a.effect)}</p>
+    <p class="meta">Duração: ${esc(a.duration)} · Intervalo: ${esc(a.cooldown)}</p>
+    ${opts?`<div class="chips" role="radiogroup" aria-label="${esc(a.name)}">${opts.map(o=>`<button role="radio" aria-checked="${o.v===chosen}" class="chip ${o.v===chosen?'on':''}" ${o.ok===false?'disabled title="'+esc(o.why||'')+'"':''} onclick="UI.optSel('${a.id}','${o.v}')">${esc(o.label)}</button>`).join('')}</div>`:''}
+    ${blocked?`<p class="blocked">${esc(blocked)}</p>`:''}
+    <button class="secondary" ${blocked?'disabled':''} onclick="UI.act('${a.id}')">Fazer${cost?` e pagar ${money(cost)}`:''}</button>
+  </article>`;
+}
+function dreTable(r){
+  const line=(l,v,c='')=>`<tr class="${c}"><td>${l}</td><td>${typeof v==='number'?M(v):v}</td></tr>`;
+  return `<table class="tbl dre"><tbody>
+    ${line('Procura',`<span class="num">${r.demand} clientes</span>`)}${line('Capacidade',`<span class="num">${r.capacity} cortes</span>`)}
+    ${line('Atendimentos (menor dos dois)',`<span class="num">${r.cuts} × ${money(r.price)}</span>`)}
+    ${line('Faturamento',r.revenue,'sum')}${line('(−) Comissões e pisos',-r.payroll)}${line('(−) Custo variável por corte',-r.variable)}
+    ${line('(−) Aluguel',-r.rent)}${line('(−) Outros custos fixos',-r.fixed)}${r.recep?line('(−) Recepção',-r.recep):''}
+    ${line('Resultado operacional',r.operating,'sum')}${line('(−/+) Ações e acontecimentos do mês',r.extra)}${r.interest?line('(−) Juros do cheque especial',-r.interest):''}
+    ${line('Fluxo de caixa do mês',r.flow,'sum')}${line('Caixa no fim do mês',r.cash,'sum')}</tbody></table>`;
+}
+function resultView(){
+  const {row,report}=ui.result;
+  let h=`<header class="stephead"><p class="count">Fechamento</p><h2>Mês ${row.m}</h2></header>${dreTable(row)}`;
+  if(report){
+    h+=`<section class="report"><h3>Relatório do trimestre ${report.q} de 12 (meses ${report.months.join(', ')})</h3>
+      <dl class="facts wide"><dt>Faturamento</dt><dd>${M(report.revenue)}</dd><dt>Resultado operacional</dt><dd>${M(report.operating)}</dd><dt>Variação do caixa</dt><dd>${M(report.flow)}</dd>
+      <dt>Procura / capacidade / atendidos</dt><dd class="num">${report.demand} / ${report.capacity} / ${report.cuts}</dd><dt>Reputação</dt><dd class="num">${Math.round(report.reputation)}</dd></dl>
+      <h4>Pontos de atenção</h4><ul>${report.attention.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>
+      <h4>Próximo desafio</h4><p>${esc(report.next)}</p></section>`;
+  }
+  h+=`<div class="row"><button class="primary" onclick="UI.next()">${S.phase==='end'?'Ver resultado dos 36 meses':`Começar o mês ${S.month}`}</button></div>`;
+  return h;
+}
+function endView(){
+  const f=G.finalSummary(S), H=S.history;
+  const maxAbs=Math.max(1,...H.map(x=>Math.abs(x.cash)));
+  return `<header class="stephead"><p class="count">36 meses concluídos</p><h2>Seu resultado</h2></header>
+    <div class="big4"><div><span class="lbl">Caixa final</span>${M(f.cash)}</div><div><span class="lbl">Faturamento acumulado</span>${M(f.revenue)}</div>
+    <div><span class="lbl">Resultado operacional acumulado</span>${M(f.operating)}</div><div><span class="lbl">Reputação final</span><span class="num">${f.reputation}/100</span></div></div>
+    <h3>Caixa mês a mês</h3>
+    <div class="spark" role="img" aria-label="Evolução do caixa em 36 meses">${H.map(x=>`<i title="Mês ${x.m}: ${money(x.cash)}" class="${x.cash<0?'n':''}" style="height:${Math.max(2,Math.abs(x.cash)/maxAbs*100)}%"></i>`).join('')}</div>
+    <h3>Evolução anual</h3><table class="tbl"><thead><tr><th>Ano</th><th>Atendimentos</th><th>Faturamento</th><th>Resultado operacional</th><th>Caixa no fim</th></tr></thead><tbody>
+    ${f.years.map(y=>`<tr><td>${y.y}</td><td class="num">${y.cuts}</td><td>${M(y.revenue)}</td><td>${M(y.operating)}</td><td>${M(y.cash)}</td></tr>`).join('')}</tbody></table>
+    <h3>O que os números mostram</h3><ul class="facts-list">
+      <li>Você investiu ${money(f.invested)} na abertura e terminou com ${money(f.cash)} em caixa${f.debt?` (saldo devedor de ${money(f.debt)})`:''}.</li>
+      <li>${f.unserved} clientes procuraram e não foram atendidos por falta de capacidade.</li>
+      <li>${Math.round(f.idle)} atendimentos possíveis ficaram ociosos por falta de clientes.</li>
+      <li>${f.negMonths} mês(es) com caixa negativo${f.interest?`; ${money(f.interest)} pagos em juros`:''}.</li>
+      <li>Ano 3 comparado ao ano 1: faturamento ${f.years[2].revenue>=f.years[0].revenue?'maior':'menor'} (${money(f.years[2].revenue-f.years[0].revenue)}).</li></ul>
+    <details><summary>Decisões registradas (${f.notes.length})</summary><ul class="facts-list">${f.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></details>
+    <div class="row"><button class="primary" onclick="UI.restart()">Jogar novamente</button><button class="ghost" onclick="UI.sheet()">Ver extrato completo</button></div>`;
+}
+
+/* extrato */
+function sheet(){
+  const dlg=$('#sheet');
+  const rows=[...S.ledger].reverse().slice(0,400);
+  dlg.innerHTML=`<div class="sheethead"><h2>Extrato</h2><button class="ghost small" onclick="document.getElementById('sheet').close()">Fechar</button></div>
+    <p class="${G.reconcile(S)===0?'ok':'neg'}">R$ 100.000 inicial + lançamentos = ${money(S.cash)} ${G.reconcile(S)===0?'(confere)':'(DIVERGE)'}</p>
+    <div class="scroll"><table class="tbl"><thead><tr><th>Mês</th><th>Lançamento</th><th>Valor</th><th>Saldo</th></tr></thead><tbody>
+    ${rows.map(e=>`<tr><td class="num">${e.m||'Abertura'}</td><td>${esc(e.desc)}</td><td>${M(e.amount)}</td><td>${M(e.after)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="row"><button class="danger small" onclick="UI.restart()">Reiniciar partida</button></div>`;
+  dlg.showModal();
+}
+
+/* ---------- ações do usuário ---------- */
+window.UI = {
+  start(){ if(load() && !confirm('Começar do zero? A partida salva neste aparelho será apagada.')) return;
+    S=G.newGame(); ui={sel:null,qty:null,team:{ini:1,inter:0},opt:{},result:null,view:'game'}; render(); scrollTo(0,0); },
+  resume(){ const d=load(); if(!d) return; S=d.S; ui.view=d.view==='intro'?'game':d.view; ui.result=d.result; render(); },
+  restart(){ if(!confirm('Reiniciar? Todo o progresso desta partida será perdido.')) return;
+    try{localStorage.removeItem(KEY);}catch(e){} const dl=$('#sheet'); if(dl.open) dl.close(); S=null; ui.view='intro'; render(); },
+  pick(i){ ui.sel=i; render(); },
+  qty(d){ const n=(ui.qty ?? Math.min(G.maxQty(S),4))+d; ui.qty=Math.max(1,Math.min(G.maxQty(S),n)); render(); },
+  qtySet(v){ const n=Math.floor(Number(v)); ui.qty=n>0?n:1; dock(); },
+  team(k,d){ ui.team[k]=Math.max(0,ui.team[k]+d); render(); },
+  confirm(){
+    const st=G.STEPS[S.step]; let arg=ui.sel;
+    if(st.id==='qty') arg=ui.qty ?? Math.min(G.maxQty(S),4);
+    if(st.id==='team') arg=[...Array(ui.team.inter).fill(1),...Array(ui.team.ini).fill(0)];
+    if(st.id==='review') arg=0;
+    const r=G.setupConfirm(S,arg);
+    if(!r.ok) return err(r.err);
+    ui.sel=null; if(st.id==='qty') ui.team={ini:Math.min(1,S.qty),inter:0};
+    render(); toast(r); scrollTo(0,0);
+  },
+  optSel(id,v){ const a=G.ACTIONS.find(x=>x.id===id); const o=a.options(S).find(x=>String(x.v)===v); ui.opt[id]=o?o.v:v; render(); },
+  act(id){
+    const a=G.ACTIONS.find(x=>x.id===id); let v;
+    if(a.options){ const opts=a.options(S); v = ui.opt[id] ?? (opts.find(o=>o.ok!==false)||{}).v; }
+    const r=G.doAction(S,id,v); if(!r.ok) return err(r.err);
+    render(); toast({...r, label:r.desc}); if(!r.cost) err2(r.desc);
+  },
+  resolve(id){ const r=G.resolvePending(S,id); if(!r.ok) return err(r.err); render(); toast({...r,label:'Decisão registrada'}); },
+  close(){ if(!confirm(`Fechar o mês ${S.month}? As decisões deste mês ficam definitivas.`)) return;
+    const r=G.closeMonth(S); if(!r.ok) return err(r.err); ui.result={row:r.row,report:r.report}; ui.view='result'; $('#toast').classList.remove('show'); ui.opt={}; render(); scrollTo(0,0); },
+  next(){ ui.view='game'; ui.result=null; render(); scrollTo(0,0); },
+  sheet,
+};
+function err2(msg){ const t=$('#toast'); t.innerHTML=`<span>${esc(msg)}</span>`; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show'); }
+
+const d=load(); if(d){ S=d.S; } render();
+})();
+</script>
+</body>
+</html>
